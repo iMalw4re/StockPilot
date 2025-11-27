@@ -1,20 +1,25 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# --- CONFIGURACIÓN ---
-# ¡OJO! Cambia 'tu_contraseña' por la real y 'nombre_bd' por la que creaste en Postgres
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:mcr181122@localhost/Logistica"
+# --- CONFIGURACIÓN HÍBRIDA (NUBE / LOCAL) ---
 
-# Creamos el motor de conexión
+# 1. Intentamos leer la dirección de la Nube (Variable de Entorno)
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+
+# 2. Si no existe (porque estás en tu compu), usamos la local
+if not SQLALCHEMY_DATABASE_URL:
+    # CAMBIA ESTO POR TUS DATOS LOCALES (Como lo tenías antes)
+    SQLALCHEMY_DATABASE_URL = "postgresql://postgres:mcr181122@localhost/Logistica"
+else:
+    # Corrección para Render (a veces da la url con postgres:// y SQLAlchemy pide postgresql://)
+    if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+        SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
-
-# Creamos la sesión
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Clase base para los modelos
 Base = declarative_base()
 
-# Dependencia (Esta función es MUY importante para FastAPI)
 def get_db():
     db = SessionLocal()
     try:
