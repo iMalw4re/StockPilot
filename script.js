@@ -1,5 +1,5 @@
 // --- JAVASCRIPT (La Lógica del Frontend) ---
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://stockpilot-lhep.onrender.com";
 
 // Función 1: Cargar el Dashboard Financiero
 async function cargarFinanzas() {
