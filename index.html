@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./style.css">
+    <title>📦 Smart WMS - Panel de Control</title>
+</head>
+<body>
+
+    <h1>📦 Sistema de Gestión Logística</h1>
+
+    <div class="dashboard">
+        <div class="card">
+            <p>Valor del Inventario</p>
+            <h2 id="valorTotal">$0.00</h2>
+        </div>
+        <div class="card">
+            <p>Productos Totales</p>
+            <h2 id="totalProductos">0</h2>
+        </div>
+    </div>
+
+    <h3>Inventario en Tiempo Real</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Producto</th>
+                <th>Stock</th>
+                <th>Estado</th>
+                <th>Precio Venta</th>
+            </tr>
+        </thead>
+        <tbody id="tablaProductos">
+            </tbody>
+    </table>
+    <script src="script.js"></script>
+</body>
+</html>
