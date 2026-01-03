@@ -15,50 +15,78 @@
                 <h2>✈️ StockPilot</h2>
             </div>
             <ul>
-                <li class="active"><a href="#"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li onclick="mostrarSeccion('dashboard')" class="active"><a href="#"><i class="fas fa-home"></i> Dashboard</a></li>
                 <li><a href="#"><i class="fas fa-box"></i> Inventario</a></li>
-                <li><a href="#"><i class="fas fa-shopping-cart"></i> Movimientos</a></li>
+                <li onclick="mostrarSeccion('historial')"><a href="#"><i class="fas fa-history"></i> Movimientos</a></li>
                 <li><a href="#"><i class="fas fa-cog"></i> Configuración</a></li>
             </ul>
         </nav>
 
         <main class="main-content">
-            <header>
-                <h1>Panel de Control</h1>
-                <button class="btn-primary" onclick="abrirModal()">
-                    <i class="fas fa-plus"></i> Nuevo Producto
-                </button>
-            </header>
+            
+            <div id="seccion-dashboard">
+                <header>
+                    <h1>Panel de Control</h1>
+                    <button class="btn-primary" onclick="abrirModal()">
+                        <i class="fas fa-plus"></i> Nuevo Producto
+                    </button>
+                </header>
 
-            <div class="cards-container">
-                <div class="card">
-                    <p>Valor del Inventario</p>
-                    <h2 id="valorTotal">$0.00</h2>
-                    <i class="fas fa-money-bill-wave icon-bg"></i>
+                <div class="cards-container">
+                    <div class="card">
+                        <p>Valor del Inventario</p>
+                        <h2 id="valorTotal">$0.00</h2>
+                        <i class="fas fa-money-bill-wave icon-bg"></i>
+                    </div>
+                    <div class="card">
+                        <p>Productos Totales</p>
+                        <h2 id="totalProductos">0</h2>
+                        <i class="fas fa-boxes icon-bg"></i>
+                    </div>
                 </div>
-                <div class="card">
-                    <p>Productos Totales</p>
-                    <h2 id="totalProductos">0</h2>
-                    <i class="fas fa-boxes icon-bg"></i>
+
+                <div class="table-container">
+                    <h3>Inventario en Tiempo Real</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Producto</th>
+                                <th>Stock</th>
+                                <th>Estado</th>
+                                <th>Precio Venta</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaProductos">
+                            </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="table-container">
-                <h3>Inventario en Tiempo Real</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>SKU</th>
-                            <th>Producto</th>
-                            <th>Stock</th>
-                            <th>Estado</th>
-                            <th>Precio Venta</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaProductos">
-                        </tbody>
-                </table>
+            <div id="seccion-historial" style="display: none;">
+                <header>
+                    <h1>Historial de Movimientos</h1>
+                </header>
+
+                <div class="table-container">
+                    <h3 style="margin-bottom: 20px; color: #718096;">Registro de Compras y Ventas</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Producto</th>
+                                <th>Tipo</th>
+                                <th>Cantidad</th>
+                                <th>Usuario</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaHistorial">
+                            </tbody>
+                    </table>
+                </div>
             </div>
+
         </main>
     </div>
 
@@ -99,13 +127,15 @@
             </form>
         </div>
     </div>
+
     <div id="modalMovimiento" class="modal">
-        <div class="modal-content" style="max-width: 400px;"> <span class="close" onclick="cerrarModalMovimiento()">&times;</span>
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close" onclick="cerrarModalMovimiento()">&times;</span>
             <h2 id="tituloMovimiento">Registrar Movimiento</h2>
             <p id="subtituloMovimiento" style="color: #718096; margin-bottom: 20px;">SKU: ...</p>
             
             <form onsubmit="guardarMovimiento(event)">
-                <input type="hidden" id="mov_id">  
+                <input type="hidden" id="mov_id">
                 <input type="hidden" id="mov_sku">
                 <input type="hidden" id="mov_tipo">
 

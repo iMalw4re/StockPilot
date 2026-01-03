@@ -3,7 +3,7 @@
 // const API_URL = "http://127.0.0.1:8000";
 
 // ❌ MODO NUBE (Comentado con //)
-const API_URL = "https://stockpilot-lhep.onrender.com";
+API_URL = "https://stockpilot-lhep.onrender.com";
 
 // 1. Cargar Dashboard (Finanzas)
 async function cargarFinanzas() {
@@ -185,6 +185,65 @@ async function guardarMovimiento(event) {
     } catch (error) {
         console.error(error);
         alert("Error de conexión");
+    }
+}
+
+// --- NAVEGACIÓN (CAMBIAR PESTAÑAS) ---
+function mostrarSeccion(seccion) {
+    // 1. Ocultamos todo
+    document.getElementById("seccion-dashboard").style.display = "none";
+    document.getElementById("seccion-historial").style.display = "none";
+    
+    // 2. Quitamos la clase 'active' del menú lateral
+    document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
+
+    // 3. Mostramos la elegida
+    if (seccion === 'dashboard') {
+        document.getElementById("seccion-dashboard").style.display = "block";
+        // Aquí podrías poner lógica para resaltar el botón del menú
+        cargarProductos(); // Recargamos datos por si acaso
+    } else if (seccion === 'historial') {
+        document.getElementById("seccion-historial").style.display = "block";
+        cargarHistorial(); // Vamos a buscar los datos a Python
+    }
+}
+
+// --- CARGAR DATOS DEL HISTORIAL ---
+async function cargarHistorial() {
+    try {
+        const respuesta = await fetch(`${API_URL}/movimientos/`);
+        const movimientos = await respuesta.json();
+        
+        const cuerpoTabla = document.getElementById('tablaHistorial');
+        cuerpoTabla.innerHTML = ""; // Limpiar
+
+        movimientos.forEach(mov => {
+            // Formatear fecha bonita
+            const fecha = new Date(mov.fecha).toLocaleString();
+            
+            // Colores según tipo
+            const colorTipo = mov.tipo_movimiento === "ENTRADA" ? "green" : "red";
+            const icono = mov.tipo_movimiento === "ENTRADA" ? "📥" : "📤";
+
+            // NOTA: Si mov.producto es null, ponemos "Producto Borrado"
+            const nombreProd = mov.producto ? mov.producto.nombre : "Producto Desconocido (ID " + mov.producto_id + ")";
+
+            const fila = `
+                <tr>
+                    <td>${fecha}</td>
+                    <td><strong>${nombreProd}</strong></td>
+                    <td style="color: ${colorTipo}; font-weight: bold;">
+                        ${icono} ${mov.tipo_movimiento}
+                    </td>
+                    <td>${mov.cantidad}</td>
+                    <td>${mov.usuario_responsable}</td>
+                </tr>
+            `;
+            cuerpoTabla.innerHTML += fila;
+        });
+
+    } catch (error) {
+        console.error("Error historial:", error);
     }
 }
 

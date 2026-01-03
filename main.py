@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel # Para validar datos que entran (Schemas)
 from typing import List, Optional
 from sqlalchemy import func # Función especial de SQL llamada func que nos permite hacer sumas matemáticas
+from sqlalchemy.orm import Session, joinedload  # <-- Agrega joinedload aquí
 
 # Importamos lo que creaste antes
 import models
@@ -55,6 +56,15 @@ class MovimientoCreate(BaseModel):
     tipo_movimiento: str # "ENTRADA" o "SALIDA"
     cantidad: int
     usuario_responsable: str
+
+
+# --- Dependencia para obtener la DB (ESTO TE FALTA) ---
+def get_db():
+    db = database.SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # --- RUTAS (ENDPOINTS) ---
 
@@ -142,3 +152,13 @@ def obtener_valor_inventario(db: Session = Depends(database.get_db)):
         "valor_total_almacen": valor_total,
         "items_contabilizados": db.query(models.Producto).count()
     }
+
+# --- Endpoint para obtener el Historial ---
+# --- Endpoint para obtener el Historial ---
+@app.get("/movimientos/")
+#                                     👇 AQUÍ ESTABA EL ERROR (era get_bd)
+def obtener_movimientos(db: Session = Depends(get_db)): 
+    historial = db.query(models.Movimiento).options(
+        joinedload(models.Movimiento.producto)
+    ).order_by(models.Movimiento.fecha.desc()).all()
+    return historial
