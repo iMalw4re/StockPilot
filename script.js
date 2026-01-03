@@ -1,5 +1,8 @@
 // --- CONFIGURACIÓN ---
+// ✅ MODO LOCAL (Activo)
 // const API_URL = "http://127.0.0.1:8000";
+
+// ❌ MODO NUBE (Comentado con //)
 const API_URL = "https://stockpilot-lhep.onrender.com";
 
 // 1. Cargar Dashboard (Finanzas)
@@ -15,6 +18,7 @@ async function cargarFinanzas() {
 }
 
 // 2. Cargar Tabla de Productos
+// 2. Cargar Tabla de Productos (CON BOTONES NUEVOS)
 async function cargarProductos() {
     try {
         const respuesta = await fetch(`${API_URL}/productos/`);
@@ -36,6 +40,14 @@ async function cargarProductos() {
                     <td>${prod.stock_actual}</td>
                     <td>${estado}</td>
                     <td>$${prod.precio_venta.toLocaleString()}</td>
+                    <td>
+                        <button class="btn-icon btn-vender" onclick="abrirModalMovimiento(${prod.id}, '${prod.sku}', 'salida')" title="Vender">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button class="btn-icon btn-comprar" onclick="abrirModalMovimiento(${prod.id}, '${prod.sku}', 'entrada')" title="Reabastecer">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </td>
                 </tr>
             `;
             cuerpoTabla.innerHTML += fila;
@@ -94,13 +106,85 @@ async function guardarProducto(event) {
             cargarProductos(); // Recargar tabla automáticamente
             cargarFinanzas();  // Recargar dinero automáticamente
         } else {
+            // CAMBIAMOS ESTO PARA LEER EL ERROR REAL
             const errorData = await respuesta.json();
-            alert("Error: " + errorData.detail);
+            console.log("Error detallado:", errorData); // Para verlo en consola F12
+            alert("Error del Servidor: " + JSON.stringify(errorData, null, 2)); 
         }
 
     } catch (error) {
         console.error("Error de conexión:", error);
         alert("No se pudo conectar con el servidor.");
+    }
+}
+
+// --- FUNCIONES PARA MOVIMIENTOS (COMPRAR / VENDER) ---
+
+function abrirModalMovimiento(id, sku, tipo) {
+    // 1. Guardamos el ID numérico que pide el backend
+    document.getElementById("mov_id").value = id; 
+    document.getElementById("mov_sku").value = sku;
+    document.getElementById("mov_tipo").value = tipo;
+
+    // Configuración visual (igual que antes)
+    const modal = document.getElementById("modalMovimiento");
+    const titulo = document.getElementById("tituloMovimiento");
+    const btn = document.getElementById("btnMovimiento");
+    const subtitulo = document.getElementById("subtituloMovimiento");
+
+    if (tipo === 'entrada') {
+        titulo.innerText = "📥 Reabastecer Stock";
+        titulo.style.color = "#38a169";
+        btn.style.backgroundColor = "#38a169";
+        btn.innerText = "Registrar Entrada";
+    } else {
+        titulo.innerText = "📤 Registrar Venta";
+        titulo.style.color = "#e53e3e";
+        btn.style.backgroundColor = "#e53e3e";
+        btn.innerText = "Registrar Salida";
+    }
+    
+    subtitulo.innerText = `Producto: ${sku}`;
+    modal.style.display = "block";
+    document.getElementById("mov_cantidad").focus();
+}
+
+function cerrarModalMovimiento() {
+    document.getElementById("modalMovimiento").style.display = "none";
+    document.getElementById("mov_cantidad").value = "";
+}
+
+async function guardarMovimiento(event) {
+    event.preventDefault();
+
+    // 2. Construimos el objeto EXACTO como lo pide tu main.py
+    const datosMovimiento = {
+        producto_id: parseInt(document.getElementById("mov_id").value), // Pide int
+        tipo_movimiento: document.getElementById("mov_tipo").value.toUpperCase(), // Pide "ENTRADA" (Mayúsculas)
+        cantidad: parseInt(document.getElementById("mov_cantidad").value),
+        usuario_responsable: "admin" // Pide string (Hardcodeamos "admin" por ahora)
+    };
+
+    try {
+        const respuesta = await fetch(`${API_URL}/movimientos/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datosMovimiento)
+        });
+
+        if (respuesta.ok) {
+            alert(`✅ Movimiento registrado con éxito`);
+            cerrarModalMovimiento();
+            cargarProductos(); // Recarga la tabla para ver el nuevo stock
+            cargarFinanzas();
+        } else {
+            const errorData = await respuesta.json();
+            console.log("Error:", errorData);
+            alert("Error: " + JSON.stringify(errorData, null, 2));
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Error de conexión");
     }
 }
 

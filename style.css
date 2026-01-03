@@ -210,6 +210,31 @@ th {
 }
 .btn-submit:hover { background-color: #2f855a; }   
 
+/* Botones de acción en la tabla */
+.btn-icon {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%; /* Redondos */
+    border: none;
+    color: white;
+    cursor: pointer;
+    margin: 0 5px;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-vender {
+    background-color: #e53e3e; /* Rojo */
+}
+.btn-vender:hover { background-color: #c53030; }
+
+.btn-comprar {
+    background-color: #3182ce; /* Azul */
+}
+.btn-comprar:hover { background-color: #2b6cb0; }
+
 
 /* =========================================
    📱 MODO CELULAR (RESPONSIVE DESIGN)

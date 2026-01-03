@@ -99,6 +99,25 @@
             </form>
         </div>
     </div>
+    <div id="modalMovimiento" class="modal">
+        <div class="modal-content" style="max-width: 400px;"> <span class="close" onclick="cerrarModalMovimiento()">&times;</span>
+            <h2 id="tituloMovimiento">Registrar Movimiento</h2>
+            <p id="subtituloMovimiento" style="color: #718096; margin-bottom: 20px;">SKU: ...</p>
+            
+            <form onsubmit="guardarMovimiento(event)">
+                <input type="hidden" id="mov_id">  
+                <input type="hidden" id="mov_sku">
+                <input type="hidden" id="mov_tipo">
+
+                <div class="form-group">
+                    <label>Cantidad</label>
+                    <input type="number" id="mov_cantidad" required min="1" placeholder="Ej. 5">
+                </div>
+
+                <button type="submit" class="btn-submit" id="btnMovimiento">Confirmar</button>
+            </form>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
