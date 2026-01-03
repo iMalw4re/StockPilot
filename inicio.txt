@@ -1,0 +1,56 @@
+🚀 Protocolo de Inicio: StockPilot
+1. Preparar el Terreno
+Abre 2 ventanas negras (CMD o Terminal).
+
+En AMBAS, navega a tu carpeta del proyecto:
+
+
+cd Desktop\smart-wms
+
+2. Encender el Motor Trasero (Backend / Python)
+En la Ventana 1, escribe estos comandos en orden:
+
+Activar el entorno virtual:
+
+venv\Scripts\activate
+(Debes ver que aparezca (venv) a la izquierda).
+
+Arrancar el servidor:
+
+uvicorn main:app --reload
+✅ Listo si dice: Application startup complete.
+
+3. Encender el Motor Delantero (Frontend / Web)
+En la Ventana 2, escribe este comando:
+
+
+python -m http.server 5500
+✅ Listo si dice: Serving HTTP on 0.0.0.0 port 5500.
+
+4. ⚠️ El "Switch" Importante (Archivo script.js)
+Antes de probar, abre tu archivo script.js en Visual Studio Code y revisa la primera línea:
+
+Si vas a trabajar en TU PC (Local):
+
+JavaScript
+
+const API_URL = "http://127.0.0.1:8000";
+// const API_URL = "https://stockpilot-lhep.onrender.com";
+
+Si vas a subirlo a INTERNET (GitHub/Render):
+
+JavaScript
+
+// const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://stockpilot-lhep.onrender.com";
+5. Entrar al Sistema
+Ve a tu navegador (Chrome/Edge) y escribe: 👉 http://localhost:5500
+
+🛑 Protocolo de Apagado (Al terminar)
+Ve a la Ventana 1 y presiona Ctrl + C.
+
+Ve a la Ventana 2 y presiona Ctrl + C.
+
+Cierra las ventanas.
+
+¡Descansa! 🛌

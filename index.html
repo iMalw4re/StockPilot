@@ -4,37 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="./style.css">
-    <title>📦 Smart WMS - Panel de Control</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>✈️ StockPilot - Dashboard</title>
 </head>
 <body>
 
-    <h1>📦 Sistema de Gestión Logística</h1>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="logo">
+                <h2>✈️ StockPilot</h2>
+            </div>
+            <ul>
+                <li class="active"><a href="#"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="#"><i class="fas fa-box"></i> Inventario</a></li>
+                <li><a href="#"><i class="fas fa-shopping-cart"></i> Movimientos</a></li>
+                <li><a href="#"><i class="fas fa-cog"></i> Configuración</a></li>
+            </ul>
+        </nav>
 
-    <div class="dashboard">
-        <div class="card">
-            <p>Valor del Inventario</p>
-            <h2 id="valorTotal">$0.00</h2>
-        </div>
-        <div class="card">
-            <p>Productos Totales</p>
-            <h2 id="totalProductos">0</h2>
+        <main class="main-content">
+            <header>
+                <h1>Panel de Control</h1>
+                <button class="btn-primary" onclick="abrirModal()">
+                    <i class="fas fa-plus"></i> Nuevo Producto
+                </button>
+            </header>
+
+            <div class="cards-container">
+                <div class="card">
+                    <p>Valor del Inventario</p>
+                    <h2 id="valorTotal">$0.00</h2>
+                    <i class="fas fa-money-bill-wave icon-bg"></i>
+                </div>
+                <div class="card">
+                    <p>Productos Totales</p>
+                    <h2 id="totalProductos">0</h2>
+                    <i class="fas fa-boxes icon-bg"></i>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <h3>Inventario en Tiempo Real</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Producto</th>
+                            <th>Stock</th>
+                            <th>Estado</th>
+                            <th>Precio Venta</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaProductos">
+                        </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div id="modalProducto" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModal()">&times;</span>
+            <h2>📦 Nuevo Producto</h2>
+            <form id="formProducto" onsubmit="guardarProducto(event)">
+                <div class="form-group">
+                    <label>SKU (Código único)</label>
+                    <input type="text" id="sku" required placeholder="Ej. LAP-001">
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Producto</label>
+                    <input type="text" id="nombre" required placeholder="Ej. Laptop Dell">
+                </div>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Precio Compra ($)</label>
+                        <input type="number" id="precio_compra" required step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Precio Venta ($)</label>
+                        <input type="number" id="precio_venta" required step="0.01">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Stock Inicial</label>
+                        <input type="number" id="stock_actual" required value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Punto Reorden (Mínimo)</label>
+                        <input type="number" id="punto_reorden" required value="5">
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit">Guardar Producto</button>
+            </form>
         </div>
     </div>
 
-    <h3>Inventario en Tiempo Real</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>SKU</th>
-                <th>Producto</th>
-                <th>Stock</th>
-                <th>Estado</th>
-                <th>Precio Venta</th>
-            </tr>
-        </thead>
-        <tbody id="tablaProductos">
-            </tbody>
-    </table>
     <script src="script.js"></script>
 </body>
 </html>
