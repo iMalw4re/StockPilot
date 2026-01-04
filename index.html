@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="./style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <title>StockPilot</title>
 </head>
 <body>
@@ -62,9 +63,11 @@
             <div id="seccion-dashboard">
                 <header>
                     <h1>Panel de Control</h1>
-                    <button class="btn-primary" onclick="abrirModal()">
-                        <i class="fas fa-plus"></i> Nuevo Producto
-                    </button>
+                    <button class="btn-primary" style="background-color: #805ad5; margin-right: 10px;" onclick="iniciarEscaner()">
+        <i class="fas fa-qrcode"></i> Escanear
+    </button>
+
+    <button class="btn-primary" onclick="abrirModal()">+ Nuevo Producto</button>
                 </header>
 
                 <div class="cards-container">
@@ -181,6 +184,19 @@
 
                 <button type="submit" class="btn-submit" id="btnMovimiento">Confirmar</button>
             </form>
+        </div>
+    </div>
+
+    <div id="modalEscaner" class="modal">
+        <div class="modal-content" style="max-width: 500px; text-align: center;">
+            <span class="close" onclick="detenerEscaner()">&times;</span>
+            <h2>📸 Escanear Código</h2>
+            
+            <div id="reader" style="width: 100%; min-height: 300px; background: #eee;"></div>
+            
+            <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">
+                Apunta la cámara al código de barras o QR del producto.
+            </p>
         </div>
     </div>
 

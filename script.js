@@ -378,6 +378,63 @@ async function cargarHistorial() {
     }
 }
 
+
+// --- LÓGICA DEL ESCÁNER ---
+
+let html5QrcodeScanner = null; // Variable para controlar la cámara
+
+function iniciarEscaner() {
+    // 1. Mostrar el modal
+    document.getElementById("modalEscaner").style.display = "block";
+
+    // 2. Configuración del lector
+    // Si ya existe una instancia, no la creamos de nuevo
+    if (html5QrcodeScanner === null) {
+        html5QrcodeScanner = new Html5Qrcode("reader");
+    }
+
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    
+    // 3. Encender cámara (Pide permiso al usuario)
+    html5QrcodeScanner.start(
+        { facingMode: "environment" }, // Usa la cámara trasera
+        config,
+        onScanSuccess, // Función si lee bien
+        onScanFailure  // Función si falla (opcional)
+    ).catch(err => {
+        console.error("Error al iniciar cámara:", err);
+        alert("No se pudo iniciar la cámara. Verifica los permisos.");
+    });
+}
+
+// Qué pasa cuando lee un código
+function onScanSuccess(decodedText, decodedResult) {
+    // 1. Detenemos el escáner (para que no siga leyendo 100 veces)
+    detenerEscaner();
+    
+    // 2. POR AHORA: Solo mostramos lo que leyó
+    alert("📦 CÓDIGO DETECTADO: " + decodedText);
+    
+    // (En el siguiente paso haremos que busque el producto automáticamente)
+}
+
+function onScanFailure(error) {
+    // No hacer nada para no llenar la consola de errores mientras busca
+    // console.warn(`Code scan error = ${error}`);
+}
+
+function detenerEscaner() {
+    document.getElementById("modalEscaner").style.display = "none";
+    
+    if (html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => {
+            console.log("Cámara detenida.");
+        }).catch(err => {
+            console.error("Error al detener cámara:", err);
+        });
+    }
+}
+
 // Ejecutar al inicio
 cargarFinanzas();
 cargarProductos();
