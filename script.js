@@ -1,10 +1,10 @@
 // --- CONFIGURACIÓN ---
 // ✅ MODO LOCAL (Activo)
 // http://localhost:5500
-// const API_URL = "http://127.0.0.1:8000";
+const API_URL = "http://127.0.0.1:8000";
 
 // ❌ MODO NUBE (Comentado con //)
-API_URL = "https://stockpilot-lhep.onrender.com";
+// API_URL = "https://stockpilot-lhep.onrender.com";
 let inventarioGlobal = [];
 
 
@@ -136,6 +136,8 @@ async function cargarProductos() {
         
         const productos = await respuesta.json();
         inventarioGlobal = productos; // Guardamos en variable global para usar en el escáner
+
+        renderizarGraficos(productos); // Llamamos a la función para graficar
         
         const cuerpoTabla = document.getElementById('tablaProductos');
         cuerpoTabla.innerHTML = ""; // Limpiar tabla
@@ -159,6 +161,15 @@ async function cargarProductos() {
                         </button>
                         <button class="btn-icon btn-comprar" onclick="abrirModalMovimiento(${prod.id}, '${prod.sku}', 'entrada')" title="Reabastecer">
                             <i class="fas fa-plus"></i>
+                        </button>
+
+                        <span style="margin: 0 5px; border-left: 1px solid #ccc;"></span>
+
+                        <button class="btn-icon" style="background-color: #f6ad55; color: white;" onclick="abrirModalEditar(${prod.id})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon" style="background-color: #fc8181; color: white;" onclick="eliminarProducto(${prod.id})" title="Eliminar">
+                            <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 </tr>
@@ -460,6 +471,169 @@ function detenerEscaner() {
             console.error("Error al detener cámara:", err);
         });
     }
+}
+
+// --- FUNCIÓN PARA ELIMINAR PRODUCTO ---
+async function eliminarProducto(id) {
+    if (!confirm("¿Estás seguro de que quieres eliminar este producto?\nEsta acción no se puede deshacer.")) {
+        return; // Si dice "Cancelar", no hacemos nada
+    }
+
+    const token = localStorage.getItem("stockpilot_token");
+
+    try {
+        const respuesta = await fetch(`${API_URL}/productos/${id}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (respuesta.ok) {
+            alert("Producto eliminado correctamente 🗑️");
+            cargarProductos(); // Recargar tabla
+            cargarFinanzas();  // Recargar dinero
+        } else {
+            if (respuesta.status === 401) { cerrarSesion(); return; }
+            alert("No se pudo eliminar el producto.");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Error de conexión");
+    }
+}
+
+// --- FUNCIONES DE EDICIÓN ---
+
+function abrirModalEditar(id) {
+    // 1. Buscar el producto en nuestra memoria global
+    const producto = inventarioGlobal.find(p => p.id === id);
+    
+    if (producto) {
+        // 2. Rellenar el formulario con los datos actuales
+        document.getElementById("edit_id").value = producto.id;
+        document.getElementById("edit_sku").value = producto.sku;
+        document.getElementById("edit_nombre").value = producto.nombre;
+        document.getElementById("edit_precio_compra").value = producto.precio_compra;
+        document.getElementById("edit_precio_venta").value = producto.precio_venta;
+        document.getElementById("edit_stock_actual").value = producto.stock_actual;
+        document.getElementById("edit_punto_reorden").value = producto.punto_reorden;
+
+        // 3. Mostrar la ventana
+        document.getElementById("modalEditar").style.display = "block";
+    }
+}
+
+async function guardarEdicion(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById("edit_id").value;
+    const token = localStorage.getItem("stockpilot_token");
+
+    const datosActualizados = {
+        sku: document.getElementById("edit_sku").value,
+        nombre: document.getElementById("edit_nombre").value,
+        precio_compra: parseFloat(document.getElementById("edit_precio_compra").value),
+        precio_venta: parseFloat(document.getElementById("edit_precio_venta").value),
+        stock_actual: parseInt(document.getElementById("edit_stock_actual").value),
+        punto_reorden: parseInt(document.getElementById("edit_punto_reorden").value),
+        descripcion: "Actualizado desde Web"
+    };
+
+    try {
+        const respuesta = await fetch(`${API_URL}/productos/${id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(datosActualizados)
+        });
+
+        if (respuesta.ok) {
+            alert("Cambios guardados exitosamente ✨");
+            document.getElementById("modalEditar").style.display = "none";
+            cargarProductos(); // Refrescar tabla
+            cargarFinanzas();
+        } else {
+            if (respuesta.status === 401) { cerrarSesion(); return; }
+            alert("Error al actualizar");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Error de conexión");
+    }
+}
+
+
+// --- LÓGICA DE GRÁFICAS (Chart.js) ---
+
+let chartValor = null; // Variables globales para poder destruir y redibujar
+let chartStock = null;
+
+function renderizarGraficos(productos) {
+    // 1. Preparar los datos
+    // Tomamos solo los primeros 10 productos para que la gráfica no se vea fea si hay 1000
+    const topProductos = productos.slice(0, 10); 
+    
+    const nombres = topProductos.map(p => p.sku); // Usamos SKU o Nombre como etiqueta
+    const stocks = topProductos.map(p => p.stock_actual);
+    // Calculamos cuánto dinero vale cada producto (Stock * Precio Compra)
+    const valores = topProductos.map(p => p.stock_actual * p.precio_compra);
+
+    // 2. Configurar Gráfica de VALOR (Pastel / Doughnut)
+    const ctxValor = document.getElementById('graficaValor').getContext('2d');
+    
+    // Si ya existe, la destruimos para crear la nueva (evita bugs visuales)
+    if (chartValor) chartValor.destroy();
+
+    chartValor = new Chart(ctxValor, {
+        type: 'doughnut',
+        data: {
+            labels: nombres,
+            datasets: [{
+                label: 'Valor ($)',
+                data: valores,
+                backgroundColor: [
+                    '#4299e1', '#48bb78', '#f6ad55', '#f56565', '#9f7aea',
+                    '#ed64a6', '#ecc94b', '#667eea', '#76e4f7', '#feb2b2'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: { 
+            responsive: true,
+            maintainAspectRatio: false, // 👈 ¡ESTA ES LA MAGIA!
+            plugins: {
+                legend: { position: 'right' } // Pone la leyenda al lado para ahorrar altura
+            }
+        }
+    });
+
+    // 3. Configurar Gráfica de STOCK (Barras)
+    const ctxStock = document.getElementById('graficaStock').getContext('2d');
+    
+    if (chartStock) chartStock.destroy();
+
+    chartStock = new Chart(ctxStock, {
+        type: 'bar',
+        data: {
+            labels: nombres,
+            datasets: [{
+                label: 'Unidades en Stock',
+                data: stocks,
+                backgroundColor: '#4299e1',
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // 👈 ¡ESTA ES LA MAGIA!
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
 }
 
 // Ejecutar al inicio

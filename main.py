@@ -234,3 +234,55 @@ def login_para_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db
 def obtener_valor_inventario(db: Session = Depends(get_db)):
     valor = db.query(func.sum(models.Producto.stock_actual * models.Producto.precio_compra)).scalar() or 0
     return {"valor_total_almacen": valor}
+
+# --- RUTAS NUEVAS PARA EDITAR Y BORRAR ---
+
+# 1. ACTUALIZAR (PUT)
+# Recibe un ID y los datos nuevos. Sobreescribe lo anterior.
+@app.put("/productos/{producto_id}", response_model=ProductoResponse)
+def actualizar_producto(
+    producto_id: int, 
+    producto_actualizado: ProductoCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user) # 🔒 Solo Admins
+):
+    # Buscar el producto
+    producto_db = db.query(models.Producto).filter(models.Producto.id == producto_id).first()
+    
+    if not producto_db:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    # Actualizar campos
+    producto_db.sku = producto_actualizado.sku
+    producto_db.nombre = producto_actualizado.nombre
+    producto_db.precio_compra = producto_actualizado.precio_compra
+    producto_db.precio_venta = producto_actualizado.precio_venta
+    producto_db.stock_actual = producto_actualizado.stock_actual
+    producto_db.punto_reorden = producto_actualizado.punto_reorden
+    producto_db.descripcion = producto_actualizado.descripcion
+    
+    db.commit() # Guardar cambios
+    db.refresh(producto_db) # Recargar
+    return producto_db
+
+# 2. BORRAR (DELETE)
+# Recibe solo el ID y lo elimina de la faz de la tierra.
+@app.delete("/productos/{producto_id}")
+def eliminar_producto(
+    producto_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user) # 🔒 Solo Admins
+):
+    producto_db = db.query(models.Producto).filter(models.Producto.id == producto_id).first()
+    
+    if not producto_db:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    # Antes de borrar, verificamos si tiene historial (opcional, pero recomendado)
+    # Si borras un producto con movimientos, podrías romper el historial.
+    # Por ahora, permitiremos borrarlo, pero ten cuidado.
+    
+    db.delete(producto_db)
+    db.commit()
+    
+    return {"mensaje": f"Producto {producto_id} eliminado correctamente"}

@@ -417,3 +417,57 @@ th {
         /* O si prefieres verlo chiquito, usa: width: 30px; */
     }
 }
+
+
+/* --- ESTILOS DE GRÁFICAS --- */
+
+/* --- ESTILOS DE GRÁFICAS (Versión Grid Estricta) --- */
+
+.charts-container {
+    display: grid; /* Usamos Grid para mayor control */
+    grid-template-columns: 1fr 1fr; /* ⬅️ ESTO OBLIGA A 2 COLUMNAS (50% y 50%) */
+    gap: 20px;
+    margin-top: 30px;
+    width: 100%;
+}
+
+.charts-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Forzamos 2 columnas de igual tamaño */
+    gap: 20px;
+    margin-top: 30px;
+    width: 100%;
+}
+
+.chart-card {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    height: 350px;
+    position: relative;
+    
+    /* 👇 ESTA ES LA CLAVE PARA QUE NO SE ROMPA EN LA LAP */
+    min-width: 0; 
+    /* 👆 Esto le dice: "Si no cabes, encógete, pero no te bajes" */
+}
+
+.chart-canvas-box {
+    height: 280px;
+    width: 100%;
+}
+
+/* 📱 AJUSTES PARA MÓVIL (Solo se activa si la pantalla es menor a 768px) */
+@media (max-width: 768px) {
+    .charts-container {
+        grid-template-columns: 1fr; /* ⬅️ En celular forzamos 1 sola columna */
+    }
+
+    .chart-card {
+        height: 300px; /* Un poco más bajitas en el cel */
+    }
+
+    .chart-canvas-box {
+        height: 230px;
+    }
+}
