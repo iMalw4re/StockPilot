@@ -17,6 +17,17 @@ body {
     height: 100%;
 }
 
+/* --- Estilos para el LOGO DE IMAGEN --- */
+.logo-login img {
+    width: 120px;        /* 1. Define el ancho máximo (puedes probar 100px o 150px) */
+    height: auto;        /* 2. Mantiene la proporción para que no se vea estirado */
+    margin-bottom: 15px; /* 3. Un poco de aire antes del título */
+    
+    /* Opcionales para que se vea más "Pro" */
+    border-radius: 10px; /* Bordes un poco redondeados */
+    /* box-shadow: 0 4px 6px rgba(0,0,0,0.1);  <-- Descomenta si quieres sombrita */
+}
+
 /* --- SIDEBAR (Barra Izquierda) --- */
 .sidebar {
     width: 250px;
@@ -70,8 +81,9 @@ header {
     margin-bottom: 30px;
 }
 
+/* Botón "NUEVO PRODUCTO" */
 .btn-primary {
-    background-color: #3182ce;
+    background-color: #1a745f;
     color: white;
     border: none;
     padding: 10px 20px;
@@ -80,9 +92,8 @@ header {
     font-size: 16px;
     transition: 0.2s;
 }
-
 .btn-primary:hover {
-    background-color: #2b6cb0;
+    background-color: #0c4437;
 }
 
 /* --- TARJETAS (DASHBOARD) --- */
@@ -231,9 +242,61 @@ th {
 .btn-vender:hover { background-color: #c53030; }
 
 .btn-comprar {
-    background-color: #3182ce; /* Azul */
+    background-color: #1aa11e; /* Verde */
 }
-.btn-comprar:hover { background-color: #2b6cb0; }
+.btn-comprar:hover { background-color: #20d626; }
+
+
+
+/* --- ESTILOS DEL LOGIN --- */
+.login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Para que tape todo */
+}
+
+.login-box {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.logo-login h1 {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.login-box h2 {
+    color: #2d3748;
+    margin-bottom: 5px;
+}
+
+.login-box p {
+    color: #718096;
+    margin-bottom: 20px;
+}
+
+.btn-login {
+    background-color: #00445f; /* Azul bonito */
+    margin-top: 10px;
+    transition: transform 0.2s;
+}
+
+.btn-login:hover {
+    background-color: #3b7cb9;
+    transform: scale(1.02);
+}
 
 
 /* =========================================
@@ -331,5 +394,26 @@ th {
     .row {
         flex-direction: column; /* Inputs uno debajo del otro en el formulario */
         gap: 0;
+    }
+}
+
+
+/* --- ESTILO DEL LOGO EN EL DASHBOARD (SIDEBAR) --- */
+.sidebar .logo img {
+    width: 150px;       /* Un poco más pequeño para que quepa en la barra */
+    max-width: 80%;     /* Seguridad: que nunca sea más ancho que la barra */
+    height: auto;       /* Mantener proporción */
+    display: block;     /* Comportamiento de bloque para poder centrarlo */
+    margin: 0 auto 10px auto; /* Centrado horizontal y empuja un poco lo de abajo */
+    border-radius: 8px; /* Opcional: bordes suaves */
+}
+
+/* AJUSTE PARA MÓVIL (Importante) */
+/* Cuando la barra se va abajo en el celular, es mejor ocultar el logo 
+   o hacerlo muy pequeñito para que quepan los botones */
+@media (max-width: 768px) {
+    .sidebar .logo img {
+        display: none; /* Lo ocultamos en celular para ahorrar espacio */
+        /* O si prefieres verlo chiquito, usa: width: 30px; */
     }
 }

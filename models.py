@@ -67,3 +67,11 @@ class Movimiento(Base):
     # Relaciones
     producto = relationship("Producto", back_populates="movimientos")
 
+# --- 5. NUEVA CLASE USUARIO (LO QUE AGREGAMOS HOY) ---
+class Usuario(Base):
+    __tablename__ = "usuarios"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    rol = Column(String, default="empleado")

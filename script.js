@@ -1,17 +1,112 @@
 // --- CONFIGURACIÓN ---
 // ✅ MODO LOCAL (Activo)
+// http://localhost:5500
 // const API_URL = "http://127.0.0.1:8000";
 
 // ❌ MODO NUBE (Comentado con //)
 API_URL = "https://stockpilot-lhep.onrender.com";
 
+
+// --- LÓGICA DE LOGIN ---
+
+async function iniciarSesion(event) {
+    event.preventDefault();
+    
+    const usuario = document.getElementById("login_user").value;
+    const pass = document.getElementById("login_pass").value;
+    const errorMsg = document.getElementById("errorLogin");
+
+    // Preparamos los datos para enviar (Formato especial x-www-form-urlencoded)
+    const formData = new URLSearchParams();
+    formData.append("username", usuario);
+    formData.append("password", pass);
+
+    try {
+        const respuesta = await fetch(`${API_URL}/token`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: formData
+        });
+
+        if (respuesta.ok) {
+            const data = await respuesta.json();
+            
+            // 1. Guardar el Token en la memoria del navegador (LocalStorage)
+            localStorage.setItem("stockpilot_token", data.access_token);
+            
+            // 2. Ocultar Login y Mostrar App
+            document.getElementById("seccion-login").style.display = "none";
+            document.getElementById("app-principal").style.display = "flex"; // O block, según tu css
+            
+            // 3. Cargar datos
+            cargarFinanzas();
+            cargarProductos();
+            
+        } else {
+            errorMsg.style.display = "block";
+            errorMsg.innerText = "Usuario o contraseña incorrectos";
+        }
+
+    } catch (error) {
+        console.error(error);
+        errorMsg.style.display = "block";
+        errorMsg.innerText = "Error de conexión con el servidor";
+    }
+}
+
+// --- VERIFICAR SI YA ESTOY LOGUEADO AL INICIAR ---
+// Esto hace que si recargas la página, no te pida login otra vez si ya tienes token
+window.onload = function() {
+    const token = localStorage.getItem("stockpilot_token");
+    
+    if (token) {
+        // Ya tiene llave, pásale
+        document.getElementById("seccion-login").style.display = "none";
+        document.getElementById("app-principal").style.display = "flex";
+        cargarFinanzas();
+        cargarProductos();
+    } else {
+        // No tiene llave, muestra login
+        document.getElementById("seccion-login").style.display = "flex";
+        document.getElementById("app-principal").style.display = "none";
+    }
+};
+
+// --- FUNCIÓN PARA CERRAR SESIÓN ---
+function cerrarSesion() {
+    // 1. Borrar el token de la memoria segura
+    localStorage.removeItem("stockpilot_token");
+
+    // 2. Ocultar el Dashboard
+    document.getElementById("app-principal").style.display = "none";
+
+    // 3. Mostrar el Login
+    document.getElementById("seccion-login").style.display = "flex";
+
+    // 4. (Opcional) Limpiar los campos del formulario para que no se queden escritos
+    document.getElementById("login_user").value = "";
+    document.getElementById("login_pass").value = "";
+}
+
 // 1. Cargar Dashboard (Finanzas)
 async function cargarFinanzas() {
+    const token = localStorage.getItem("stockpilot_token"); // 👈 Recuperar Token
     try {
-        const respuesta = await fetch(`${API_URL}/reportes/valor-inventario`);
+        const respuesta = await fetch(`${API_URL}/reportes/valor-inventario`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}` // 👈 ¡ESTO FALTABA!
+            }
+        });
+
+        if (!respuesta.ok) {
+             if (respuesta.status === 401) { return; } // Si falla auth, no hacemos nada visual aqui
+        }
         const datos = await respuesta.json();
         document.getElementById('valorTotal').innerText = `$${datos.valor_total_almacen.toLocaleString()}`; // .toLocaleString pone las comas de miles
-        document.getElementById('totalProductos').innerText = datos.items_contabilizados;
+        document.getElementById('totalProductos').innerText = datos.items_contabilizados || 0;
     } catch (error) {
         console.error("Error cargando finanzas:", error);
     }
@@ -20,8 +115,24 @@ async function cargarFinanzas() {
 // 2. Cargar Tabla de Productos
 // 2. Cargar Tabla de Productos (CON BOTONES NUEVOS)
 async function cargarProductos() {
+    // 1. Recuperamos la llave del bolsillo
+    const token = localStorage.getItem("stockpilot_token");
+
     try {
-        const respuesta = await fetch(`${API_URL}/productos/`);
+        const respuesta = await fetch(`${API_URL}/productos/`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` // 👈 ¡ESTO ES LA LLAVE!
+            }
+        });
+
+        // (El resto de tu código sigue igual...)
+        if (!respuesta.ok) {
+             if (respuesta.status === 401) { cerrarSesion(); return; } // Si la llave venció, nos saca
+             throw new Error("Error al cargar");
+        }
+        
         const productos = await respuesta.json();
         
         const cuerpoTabla = document.getElementById('tablaProductos');
@@ -78,6 +189,7 @@ window.onclick = function(event) {
 // --- FUNCIÓN PARA GUARDAR (POST) ---
 async function guardarProducto(event) {
     event.preventDefault(); // Evita que la página se recargue sola
+    const token = localStorage.getItem("stockpilot_token"); // 👈 Recuperar Token
 
     // 1. Capturar los datos del formulario
     const nuevoProducto = {
@@ -90,14 +202,14 @@ async function guardarProducto(event) {
     };
 
     try {
-        // 2. Enviar a Python (Backend)
         const respuesta = await fetch(`${API_URL}/productos/`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` // 👈 ¡ESTO FALTABA!
             },
             body: JSON.stringify(nuevoProducto)
-        });
+        }); 
 
         if (respuesta.ok) {
             alert("¡Producto guardado con éxito! 🎉");
@@ -157,6 +269,9 @@ function cerrarModalMovimiento() {
 async function guardarMovimiento(event) {
     event.preventDefault();
 
+    // 1. Recuperar Token
+    const token = localStorage.getItem("stockpilot_token");
+
     // 2. Construimos el objeto EXACTO como lo pide tu main.py
     const datosMovimiento = {
         producto_id: parseInt(document.getElementById("mov_id").value), // Pide int
@@ -168,7 +283,10 @@ async function guardarMovimiento(event) {
     try {
         const respuesta = await fetch(`${API_URL}/movimientos/`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` // 👈 ¡ESTO FALTABA!
+            },
             body: JSON.stringify(datosMovimiento)
         });
 
@@ -210,8 +328,21 @@ function mostrarSeccion(seccion) {
 
 // --- CARGAR DATOS DEL HISTORIAL ---
 async function cargarHistorial() {
+    const token = localStorage.getItem("stockpilot_token"); // 👈 Recuperar Token
     try {
-        const respuesta = await fetch(`${API_URL}/movimientos/`);
+        const respuesta = await fetch(`${API_URL}/movimientos/`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` // 👈 ¡ESTO FALTABA!
+            }
+        });
+        
+        if (!respuesta.ok) {
+             if (respuesta.status === 401) { cerrarSesion(); return; }
+             throw new Error("Error al cargar historial");
+        }
+
         const movimientos = await respuesta.json();
         
         const cuerpoTabla = document.getElementById('tablaHistorial');
