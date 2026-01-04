@@ -5,6 +5,7 @@
 
 // ❌ MODO NUBE (Comentado con //)
 API_URL = "https://stockpilot-lhep.onrender.com";
+let inventarioGlobal = [];
 
 
 // --- LÓGICA DE LOGIN ---
@@ -134,6 +135,7 @@ async function cargarProductos() {
         }
         
         const productos = await respuesta.json();
+        inventarioGlobal = productos; // Guardamos en variable global para usar en el escáner
         
         const cuerpoTabla = document.getElementById('tablaProductos');
         cuerpoTabla.innerHTML = ""; // Limpiar tabla
@@ -409,13 +411,38 @@ function iniciarEscaner() {
 
 // Qué pasa cuando lee un código
 function onScanSuccess(decodedText, decodedResult) {
-    // 1. Detenemos el escáner (para que no siga leyendo 100 veces)
+    // 1. Detener escáner y cerrar modal
     detenerEscaner();
     
-    // 2. POR AHORA: Solo mostramos lo que leyó
-    alert("📦 CÓDIGO DETECTADO: " + decodedText);
-    
-    // (En el siguiente paso haremos que busque el producto automáticamente)
+    console.log(`Código escaneado: ${decodedText}`);
+
+    // 2. Buscar si el producto existe en nuestra memoria
+    // (Buscamos que el SKU coincida con lo escaneado)
+    const productoEncontrado = inventarioGlobal.find(p => p.sku === decodedText);
+
+    if (productoEncontrado) {
+        // --- CASO A: ¡ENCONTRADO! ---
+        // Reproducir sonido de "Beep" (Opcional, pero satisfactorio)
+        // const audio = new Audio('beep.mp3'); audio.play();
+
+        // Preguntar o asumir acción. Por defecto: Abrimos ventana de VENTA (Salida)
+        // Pasamos el ID, el SKU y 'salida'
+        abrirModalMovimiento(productoEncontrado.id, productoEncontrado.sku, 'salida');
+        
+        // Un pequeño aviso visual
+        alert(`✅ Producto encontrado: ${productoEncontrado.nombre}\nListo para vender.`);
+
+    } else {
+        // --- CASO B: NO EXISTE ---
+        const crearNuevo = confirm(`⚠️ El producto con código ${decodedText} no existe.\n\n¿Quieres registrarlo ahora?`);
+        
+        if (crearNuevo) {
+            abrirModal(); // Abrir formulario de creación
+            // Rellenar el SKU automáticamente para ahorrar tiempo
+            document.getElementById("sku").value = decodedText;
+            document.getElementById("nombre").focus(); // Poner el cursor en el nombre
+        }
+    }
 }
 
 function onScanFailure(error) {
