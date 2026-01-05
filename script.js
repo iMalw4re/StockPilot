@@ -1,10 +1,10 @@
 // --- CONFIGURACIÓN ---
 // ✅ MODO LOCAL (Activo)
 // http://localhost:5500
-//const API_URL = "http://127.0.0.1:8000";
+const API_URL = "http://127.0.0.1:8000";
 
 // ❌ MODO NUBE (Comentado con //)
-API_URL = "https://stockpilot-lhep.onrender.com";
+//API_URL = "https://stockpilot-lhep.onrender.com";
 let inventarioGlobal = [];
 
 
@@ -143,9 +143,9 @@ async function cargarProductos() {
         cuerpoTabla.innerHTML = ""; // Limpiar tabla
 
         productos.forEach(prod => {
-            let estado = '<span class="ok">Normal</span>';
+            let estado = '<span class="ok">Stock</span>';
             if (prod.stock_actual <= prod.punto_reorden) {
-                estado = '<span class="alerta"><i class="fas fa-exclamation-triangle"></i> REORDENAR</span>';
+                estado = '<span class="alerta">REORDENAR</span>';
             }
 
             const fila = `
@@ -258,12 +258,12 @@ function abrirModalMovimiento(id, sku, tipo) {
     const subtitulo = document.getElementById("subtituloMovimiento");
 
     if (tipo === 'entrada') {
-        titulo.innerText = "📥 Reabastecer Stock";
+        titulo.innerText = "Reabastecer Stock";
         titulo.style.color = "#38a169";
         btn.style.backgroundColor = "#38a169";
         btn.innerText = "Registrar Entrada";
     } else {
-        titulo.innerText = "📤 Registrar Venta";
+        titulo.innerText = "Registrar Venta";
         titulo.style.color = "#e53e3e";
         btn.style.backgroundColor = "#e53e3e";
         btn.innerText = "Registrar Salida";
@@ -367,8 +367,6 @@ async function cargarHistorial() {
             
             // Colores según tipo
             const colorTipo = mov.tipo_movimiento === "ENTRADA" ? "green" : "red";
-            const icono = mov.tipo_movimiento === "ENTRADA" ? "📥" : "📤";
-
             // NOTA: Si mov.producto es null, ponemos "Producto Borrado"
             const nombreProd = mov.producto ? mov.producto.nombre : "Producto Desconocido (ID " + mov.producto_id + ")";
 
@@ -377,7 +375,7 @@ async function cargarHistorial() {
                     <td>${fecha}</td>
                     <td><strong>${nombreProd}</strong></td>
                     <td style="color: ${colorTipo}; font-weight: bold;">
-                        ${icono} ${mov.tipo_movimiento}
+                        ${mov.tipo_movimiento}
                     </td>
                     <td>${mov.cantidad}</td>
                     <td>${mov.usuario_responsable}</td>
