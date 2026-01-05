@@ -1,10 +1,10 @@
 // --- CONFIGURACIÓN ---
 // ✅ MODO LOCAL (Activo)
 // http://localhost:5500
-// const API_URL = "http://127.0.0.1:8000";
+ const API_URL = "http://127.0.0.1:8000";
 
 // ❌ MODO NUBE (Comentado con //)
-API_URL = "https://stockpilot-lhep.onrender.com";
+//API_URL = "https://stockpilot-lhep.onrender.com";
 let inventarioGlobal = [];
 
 
@@ -225,7 +225,7 @@ async function guardarProducto(event) {
         }); 
 
         if (respuesta.ok) {
-            alert("¡Producto guardado con éxito! 🎉");
+            alert("Producto guardado con éxito");
             cerrarModal();
             document.getElementById("formProducto").reset(); // Limpiar formulario
             cargarProductos(); // Recargar tabla automáticamente
@@ -304,7 +304,7 @@ async function guardarMovimiento(event) {
         });
 
         if (respuesta.ok) {
-            alert(`✅ Movimiento registrado con éxito`);
+            alert(` Movimiento registrado con éxito`);
             cerrarModalMovimiento();
             cargarProductos(); // Recarga la tabla para ver el nuevo stock
             cargarFinanzas();
@@ -441,11 +441,11 @@ function onScanSuccess(decodedText, decodedResult) {
         abrirModalMovimiento(productoEncontrado.id, productoEncontrado.sku, 'salida');
         
         // Un pequeño aviso visual
-        alert(`✅ Producto encontrado: ${productoEncontrado.nombre}\nListo para vender.`);
+        alert(` Producto encontrado: ${productoEncontrado.nombre}\nListo para vender.`);
 
     } else {
         // --- CASO B: NO EXISTE ---
-        const crearNuevo = confirm(`⚠️ El producto con código ${decodedText} no existe.\n\n¿Quieres registrarlo ahora?`);
+        const crearNuevo = confirm(` El producto con código ${decodedText} no existe.\n\n¿Quieres registrarlo ahora?`);
         
         if (crearNuevo) {
             abrirModal(); // Abrir formulario de creación
@@ -490,7 +490,7 @@ async function eliminarProducto(id) {
         });
 
         if (respuesta.ok) {
-            alert("Producto eliminado correctamente 🗑️");
+            alert("Producto eliminado correctamente");
             cargarProductos(); // Recargar tabla
             cargarFinanzas();  // Recargar dinero
         } else {
@@ -551,7 +551,7 @@ async function guardarEdicion(event) {
         });
 
         if (respuesta.ok) {
-            alert("Cambios guardados exitosamente ✨");
+            alert("Cambios guardados exitosamente");
             document.getElementById("modalEditar").style.display = "none";
             cargarProductos(); // Refrescar tabla
             cargarFinanzas();
@@ -595,8 +595,8 @@ function renderizarGraficos(productos) {
                 label: 'Valor ($)',
                 data: valores,
                 backgroundColor: [
-                    '#4299e1', '#48bb78', '#f6ad55', '#f56565', '#9f7aea',
-                    '#ed64a6', '#ecc94b', '#667eea', '#76e4f7', '#feb2b2'
+                    '#76e4f7', '#48bb78', '#f6ad55', '#f56565', '#9f7aea',
+                    '#ed64a6', '#ecc94b', '#667eea', '#a33249ff', '#feb2b2'
                 ],
                 borderWidth: 1
             }]
@@ -622,7 +622,7 @@ function renderizarGraficos(productos) {
             datasets: [{
                 label: 'Unidades en Stock',
                 data: stocks,
-                backgroundColor: '#4299e1',
+                backgroundColor: '#3dc4c6ff',
                 borderRadius: 5
             }]
         },

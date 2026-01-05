@@ -84,14 +84,14 @@
                     </div>
                 </div>
                 <div class="charts-container"> <div class="chart-card">
-                    <h3>💰 Distribución de Valor</h3>
+                    <h3> Distribución de Valor</h3>
                     <div class="chart-canvas-box">
                         <canvas id="graficaValor"></canvas>
                     </div>
                 </div>
 
                 <div class="chart-card">
-                    <h3>📦 Niveles de Stock</h3>
+                    <h3> Niveles de Stock</h3>
                     <div class="chart-canvas-box">
                         <canvas id="graficaStock"></canvas>
                     </div>
@@ -146,7 +146,7 @@
     <div id="modalProducto" class="modal">
         <div class="modal-content">
             <span class="close" onclick="cerrarModal()">&times;</span>
-            <h2>📦 Nuevo Producto</h2>
+            <h2> Nuevo Producto</h2>
             <form id="formProducto" onsubmit="guardarProducto(event)">
                 <div class="form-group">
                     <label>SKU (Código único)</label>
@@ -184,7 +184,7 @@
     <div id="modalEditar" class="modal">
         <div class="modal-content">
             <span class="close" onclick="document.getElementById('modalEditar').style.display='none'">&times;</span>
-            <h2>✏️ Editar Producto</h2>
+            <h2> Editar Producto</h2>
             
             <form onsubmit="guardarEdicion(event)">
                 <input type="hidden" id="edit_id">
@@ -246,7 +246,7 @@
     <div id="modalEscaner" class="modal">
         <div class="modal-content" style="max-width: 500px; text-align: center;">
             <span class="close" onclick="detenerEscaner()">&times;</span>
-            <h2>📸 Escanear Código</h2>
+            <h2>Escanear Código</h2>
             
             <div id="reader" style="width: 100%; min-height: 300px; background: #eee;"></div>
             
