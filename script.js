@@ -576,7 +576,7 @@ function renderizarGraficos(productos) {
     // Tomamos solo los primeros 10 productos para que la gráfica no se vea fea si hay 1000
     const topProductos = productos.slice(0, 10); 
     
-    const nombres = topProductos.map(p => p.sku); // Usamos SKU o Nombre como etiqueta
+    const nombres = topProductos.map(p => p.nombre); // Usamos SKU o Nombre como etiqueta
     const stocks = topProductos.map(p => p.stock_actual);
     // Calculamos cuánto dinero vale cada producto (Stock * Precio Compra)
     const valores = topProductos.map(p => p.stock_actual * p.precio_compra);
