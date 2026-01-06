@@ -1,7 +1,7 @@
 // --- CONFIGURACIÓN ---
 // ✅ MODO LOCAL (Activo)
 // http://localhost:5500
-// const API_URL = "http://127.0.0.1:8000";
+//API_URL = "http://127.0.0.1:8000";
 
 // ❌ MODO NUBE (Comentado con //)
 API_URL = "https://stockpilot-lhep.onrender.com";
@@ -91,6 +91,22 @@ function cerrarSesion() {
     document.getElementById("login_pass").value = "";
 }
 
+// Función para formatear fechas de forma legible
+function formatearFecha(fechaString) {
+    if (!fechaString) return "Sin fecha";
+    const fecha = new Date(fechaString);
+    
+    // Configuración para que se vea así: "05/01/2026, 07:03 PM"
+    return fecha.toLocaleString('es-MX', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
 // 1. Cargar Dashboard (Finanzas)
 async function cargarFinanzas() {
     const token = localStorage.getItem("stockpilot_token"); // 👈 Recuperar Token
@@ -137,6 +153,10 @@ async function cargarProductos() {
         const productos = await respuesta.json();
         inventarioGlobal = productos; // Guardamos en variable global para usar en el escáner
 
+        const contadorCard = document.getElementById('total-productos');
+        if (contadorCard) {
+            contadorCard.innerText = productos.length; // Pone la cantidad real (ej. 15)
+        }
         renderizarGraficos(productos); // Llamamos a la función para graficar
         
         const cuerpoTabla = document.getElementById('tablaProductos');
@@ -324,6 +344,7 @@ function mostrarSeccion(seccion) {
     // 1. Ocultamos todo
     document.getElementById("seccion-dashboard").style.display = "none";
     document.getElementById("seccion-historial").style.display = "none";
+    document.getElementById("seccion-caja").style.display = "none";
     
     // 2. Quitamos la clase 'active' del menú lateral
     document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
@@ -336,18 +357,22 @@ function mostrarSeccion(seccion) {
     } else if (seccion === 'historial') {
         document.getElementById("seccion-historial").style.display = "block";
         cargarHistorial(); // Vamos a buscar los datos a Python
+    }else if (seccion === 'caja') {
+        // --- NUEVO: Lógica para la Caja ---
+        document.getElementById("seccion-caja").style.display = "block";
+        cargarProductosPOS(); // 👇 Esta función la crearemos ahora
     }
 }
 
-// --- CARGAR DATOS DEL HISTORIAL ---
+// --- CARGAR DATOS DEL HISTORIAL (CORREGIDO) ---
 async function cargarHistorial() {
-    const token = localStorage.getItem("stockpilot_token"); // 👈 Recuperar Token
+    const token = localStorage.getItem("stockpilot_token");
     try {
         const respuesta = await fetch(`${API_URL}/movimientos/`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}` // 👈 ¡ESTO FALTABA!
+                "Authorization": `Bearer ${token}`
             }
         });
         
@@ -359,21 +384,34 @@ async function cargarHistorial() {
         const movimientos = await respuesta.json();
         
         const cuerpoTabla = document.getElementById('tablaHistorial');
-        cuerpoTabla.innerHTML = ""; // Limpiar
+        cuerpoTabla.innerHTML = ""; 
 
         movimientos.forEach(mov => {
-            // Formatear fecha bonita
-            const fecha = new Date(mov.fecha).toLocaleString();
-            
-            // Colores según tipo
+            // ---------------------------------------------------------
+            // 🔧 CORRECCIÓN BUG FECHA:
+            // 1. Buscamos el dato en 'fecha' O en 'fecha_movimiento' por si acaso
+            const fechaCruda = mov.fecha || mov.fecha_movimiento;
+            let fechaTexto = "Sin Fecha";
+
+            // 2. Validamos antes de formatear
+            if (fechaCruda) {
+                const fechaObj = new Date(fechaCruda);
+                // Si la fecha es válida, la formateamos bonito
+                if (!isNaN(fechaObj)) {
+                    fechaTexto = fechaObj.toLocaleString('es-MX', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', hour12: true
+                    });
+                }
+            }
+            // ---------------------------------------------------------
+
             const colorTipo = mov.tipo_movimiento === "ENTRADA" ? "green" : "red";
-            // NOTA: Si mov.producto es null, ponemos "Producto Borrado"
-            const nombreProd = mov.producto ? mov.producto.nombre : "Producto Desconocido (ID " + mov.producto_id + ")";
+            const nombreProd = mov.producto ? mov.producto.nombre : `Producto Desconocido (ID ${mov.producto_id})`;
 
             const fila = `
                 <tr>
-                    <td>${fecha}</td>
-                    <td><strong>${nombreProd}</strong></td>
+                    <td>${fechaTexto}</td> <td><strong>${nombreProd}</strong></td>
                     <td style="color: ${colorTipo}; font-weight: bold;">
                         ${mov.tipo_movimiento}
                     </td>
@@ -632,6 +670,166 @@ function renderizarGraficos(productos) {
             }
         }
     });
+}
+
+// --- LÓGICA DEL PUNTO DE VENTA (POS) ---
+
+let carrito = []; // Aquí guardaremos las cosas antes de vender
+
+function cargarProductosPOS() {
+    const cuerpoTabla = document.getElementById('tabla-productos-pos');
+    cuerpoTabla.innerHTML = ""; // Limpiar antes de pintar
+
+    // Usamos inventarioGlobal, que ya tiene los datos cargados
+    inventarioGlobal.forEach(prod => {
+        // Solo mostramos productos con stock positivo (opcional)
+        // if (prod.stock_actual > 0) { ... }
+
+        const fila = `
+            <tr>
+                <td>
+                    <strong>${prod.nombre}</strong><br>
+                    <small style="color:#888;">${prod.sku}</small>
+                </td>
+                <td>$${prod.precio_venta}</td>
+                <td>${prod.stock_actual}</td>
+                <td>
+                    <button class="btn-icon" style="background-color: #48bb78; color: white;" 
+                            onclick="agregarAlCarrito(${prod.id})">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        cuerpoTabla.innerHTML += fila;
+    });
+}
+
+function agregarAlCarrito(idProducto) {
+    // 1. Buscar el producto en la memoria
+    const producto = inventarioGlobal.find(p => p.id === idProducto);
+    
+    // 2. Revisar si ya está en el carrito para solo sumar cantidad
+    const itemEnCarrito = carrito.find(item => item.id === idProducto);
+
+    if (itemEnCarrito) {
+        // Si ya está, le sumamos 1, PERO revisamos que no supere el stock real
+        if (itemEnCarrito.cantidad < producto.stock_actual) {
+            itemEnCarrito.cantidad++;
+        } else {
+            alert("¡No tienes más stock de este producto!");
+            return;
+        }
+    } else {
+        // Si no está, lo agregamos nuevo con cantidad 1
+        if (producto.stock_actual > 0) {
+            carrito.push({
+                id: producto.id,
+                sku: producto.sku,
+                nombre: producto.nombre,
+                precio: producto.precio_venta,
+                cantidad: 1
+            });
+        } else {
+            alert("Producto agotado");
+            return;
+        }
+    }
+
+    // 3. Actualizar la vista del ticket
+    renderizarCarrito();
+}
+
+function renderizarCarrito() {
+    const divCarrito = document.getElementById('lista-carrito');
+    const spanTotal = document.getElementById('total-carrito');
+    divCarrito.innerHTML = ""; // Limpiar
+
+    let total = 0;
+
+    carrito.forEach((item, index) => {
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+
+        const htmlItem = `
+            <div class="item-ticket">
+                <div>
+                    <strong>${item.nombre}</strong><br>
+                    <small>${item.cantidad} x $${item.precio}</small>
+                </div>
+                <div style="text-align: right;">
+                    <strong>$${subtotal}</strong><br>
+                    <i class="fas fa-trash" style="color: red; cursor: pointer;" onclick="eliminarDelCarrito(${index})"></i>
+                </div>
+            </div>
+        `;
+        divCarrito.innerHTML += htmlItem;
+    });
+
+    spanTotal.innerText = `$${total.toLocaleString()}`;
+    
+    // Si está vacío mostrar mensaje
+    if (carrito.length === 0) {
+        divCarrito.innerHTML = '<p style="text-align: center; color: #aaa; margin-top: 20px;">El carrito está vacío</p>';
+    }
+}
+
+function eliminarDelCarrito(index) {
+    carrito.splice(index, 1); // Borrar item por su posición
+    renderizarCarrito();
+}
+
+function limpiarCarrito() {
+    carrito = [];
+    renderizarCarrito();
+}
+
+
+async function finalizarCompra() {
+    if (carrito.length === 0) return alert("El carrito está vacío");
+
+    const token = localStorage.getItem("stockpilot_token");
+    
+    // 1. Preparamos los datos como le gustan a Python
+    const itemsParaEnviar = carrito.map(item => ({
+        producto_id: item.id,
+        cantidad: item.cantidad
+    }));
+
+    const datosVenta = {
+        items: itemsParaEnviar,
+        usuario_responsable: "admin" // O el usuario real si lo guardaste
+    };
+
+    // 2. Enviamos al servidor
+    try {
+        const respuesta = await fetch(`${API_URL}/ventas/checkout`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(datosVenta)
+        });
+
+        if (respuesta.ok) {
+            // 3. ÉXITO
+            // Reproducir sonido de caja registradora (Opcional)
+            // new Audio('kaching.mp3').play();
+            
+            alert("¡Venta registrada con éxito!");
+            limpiarCarrito(); // Borra la lista visual
+            cargarProductos(); // Actualiza el stock en la tabla izquierda
+            cargarFinanzas();  // Actualiza el dinero en el dashboard
+        } else {
+            const error = await respuesta.json();
+            alert("❌ Error: " + (error.detail || "No se pudo procesar"));
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Error de conexión");
+    }
 }
 
 // Ejecutar al inicio

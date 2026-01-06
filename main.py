@@ -119,6 +119,15 @@ class UsuarioCreate(BaseModel):
     username: str
     password: str
 
+
+# --- NUEVOS SCHEMAS PARA VENTA MASIVA ---
+class ItemVenta(BaseModel):
+    producto_id: int
+    cantidad: int
+
+class VentaCreate(BaseModel):
+    items: List[ItemVenta] # Recibe una lista de items
+    usuario_responsable: str
 # --- RUTAS ---
 
 @app.post("/productos/", response_model=ProductoResponse)
@@ -156,23 +165,24 @@ def leer_productos(
 def registrar_movimiento(
         movimiento: MovimientoCreate, 
         db: Session = Depends(get_db),
-        current_user: models.Usuario = Depends(get_current_user) # 👈 El Cadenero
+        current_user: models.Usuario = Depends(get_current_user) 
     ):
+    # 1. Buscamos el producto
     producto = db.query(models.Producto).filter(models.Producto.id == movimiento.producto_id).first()
+    
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 
-    if movimiento.tipo_movimiento == "SALIDA":
+    # 2. VALIDACIÓN: Aunque el Trigger hace el cálculo, 
+    # es buena práctica evitar que la venta pase si no hay stock suficiente.
+    if movimiento.tipo_movimiento == "SALIDA": # Ojo: Asegúrate que coincida con lo que espera tu Trigger ('VENTA', 'AJUSTE_SALIDA', etc.)
         if producto.stock_actual < movimiento.cantidad:
             raise HTTPException(status_code=400, detail="Stock insuficiente")
-        producto.stock_actual -= movimiento.cantidad
     
-    elif movimiento.tipo_movimiento == "ENTRADA":
-        producto.stock_actual += movimiento.cantidad
-    
-    else:
-        raise HTTPException(status_code=400, detail="Tipo de movimiento inválido")
+    # --- AQUÍ QUITAMOS LA LÓGICA MATEMÁTICA MANUAL ---
+    # Ya no hacemos sumas ni restas aquí. Confiamos en el Trigger.
 
+    # 3. Creamos el objeto movimiento
     nuevo_movimiento = models.Movimiento(
         producto_id=movimiento.producto_id,
         tipo_movimiento=movimiento.tipo_movimiento,
@@ -183,21 +193,32 @@ def registrar_movimiento(
     
     try:
         db.add(nuevo_movimiento)
-        db.commit()
+        db.commit() # <--- ¡AQUÍ DISPARA EL TRIGGER EN LA BD! 🔫
+        
+        # 4. Refrescamos los datos para ver qué hizo la base de datos
         db.refresh(nuevo_movimiento)
+        db.refresh(producto) # 👈 IMPORTANTE: Le pedimos a la BD el stock actualizado por el trigger
+        
         return {"mensaje": "Movimiento exitoso", "nuevo_stock": producto.stock_actual}
+        
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+# --- ESTO ES LO QUE TE FALTA ---
 @app.get("/movimientos/")
-def obtener_movimientos(
+def leer_movimientos(
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_user) # 👈 El Cadenero
+    current_user: models.Usuario = Depends(get_current_user)
 ):
-    return db.query(models.Movimiento).options(
-        joinedload(models.Movimiento.producto)
-    ).order_by(models.Movimiento.fecha_movimiento.desc()).all()
+    # Usamos joinedload para traer también los datos del Producto (nombre, sku)
+    # y ordenamos por ID descendente para ver los más nuevos primero.
+    movimientos = db.query(models.Movimiento)\
+        .options(joinedload(models.Movimiento.producto))\
+        .order_by(models.Movimiento.id.desc())\
+        .all()
+    
+    return movimientos
 
 @app.post("/registrar/")
 def registrar_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
@@ -286,3 +307,39 @@ def eliminar_producto(
     db.commit()
     
     return {"mensaje": f"Producto {producto_id} eliminado correctamente"}
+
+
+@app.post("/ventas/checkout")
+def procesar_venta(
+    venta: VentaCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user)
+):
+    # 1. Validar Stock Total primero (Para que no venda si falta algo)
+    for item in venta.items:
+        producto = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
+        if not producto:
+            raise HTTPException(status_code=404, detail=f"Producto ID {item.producto_id} no encontrado")
+        if producto.stock_actual < item.cantidad:
+            raise HTTPException(status_code=400, detail=f"Stock insuficiente para {producto.nombre}")
+
+    # 2. Si todo está bien, registramos los movimientos
+    try:
+        total_items = 0
+        for item in venta.items:
+            nuevo_movimiento = models.Movimiento(
+                producto_id=item.producto_id,
+                tipo_movimiento="SALIDA", # Es una venta
+                cantidad=item.cantidad,
+                usuario_responsable=venta.usuario_responsable,
+                fecha_movimiento=datetime.now()
+            )
+            db.add(nuevo_movimiento)
+            total_items += 1
+            
+        db.commit() # Guardamos todo de golpe
+        return {"mensaje": "Venta exitosa", "items_procesados": total_items}
+        
+    except Exception as e:
+        db.rollback() # Si algo falla, deshacemos todo
+        raise HTTPException(status_code=500, detail=str(e))

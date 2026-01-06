@@ -51,6 +51,8 @@
                 <li onclick="mostrarSeccion('historial')">
                     <a href="#"><i class="fas fa-history"></i> Movimientos</a>
                 </li>
+                <li onclick="mostrarSeccion('caja')">
+                    <a href="#"><i class="fas fa-cash-register"></i> Punto de Venta</a>
                 
                 <li><a href="#"><i class="fas fa-cog"></i> Configuración</a></li>
 
@@ -80,9 +82,8 @@
                         <i class="fas fa-money-bill-wave icon-bg"></i>
                     </div>
                     <div class="card">
-                        <p>Productos Totales</p>
-                        <h2 id="totalProductos">0</h2>
-                        <i class="fas fa-boxes icon-bg"></i>
+                        <h3>Total Productos</h3>
+                        <h2 id="total-productos">0</h2> 
                     </div>
                 </div>
                 <div class="charts-container"> <div class="chart-card">
@@ -141,6 +142,56 @@
                     </table>
                 </div>
             </div>
+
+            <div id="seccion-caja" style="display: none;">
+    <h2>🛒 Punto de Venta</h2>
+    
+    <div class="contenedor-pos">
+        
+        <div class="columna-productos">
+            <input type="text" id="buscador-pos" placeholder="🔍 Buscar producto por nombre o código..." 
+                   style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ddd;"
+                   onkeyup="filtrarProductosPOS()">
+
+            <table class="tabla-moderna">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-productos-pos">
+                    </tbody>
+            </table>
+        </div>
+            <div class="columna-ticket">
+                <div class="ticket-header">
+                    <h3>Ticket de Venta</h3>
+                    <small id="fecha-ticket">--/--/----</small>
+                </div>
+
+                <div class="ticket-body" id="lista-carrito">
+                    <p style="text-align: center; color: #aaa; margin-top: 20px;">El carrito está vacío</p>
+                </div>
+
+                <div class="ticket-total">
+                    <span>TOTAL A PAGAR</span>
+                    <span class="total-grande" id="total-carrito">$0.00</span>
+                </div>
+
+                <button class="btn" style="background-color: #48bb78; width: 100%; margin-top: 10px; padding: 15px; font-size: 1.2em;" onclick="finalizarCompra()">
+                    <i class="fas fa-cash-register"></i> COBRAR
+                </button>
+                
+                <button class="btn" style="background-color: #fc8181; width: 100%; margin-top: 5px;" onclick="limpiarCarrito()">
+                    <i class="fas fa-trash"></i> Cancelar
+                </button>
+            </div>
+
+        </div>
+    </div>
 
         </main>
     </div>
@@ -225,25 +276,26 @@
     </div>
 
     <div id="modalMovimiento" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
-            <span class="close" onclick="cerrarModalMovimiento()">&times;</span>
-            <h2 id="tituloMovimiento">Registrar Movimiento</h2>
-            <p id="subtituloMovimiento" style="color: #718096; margin-bottom: 20px;">SKU: ...</p>
-            
-            <form onsubmit="guardarMovimiento(event)">
-                <input type="hidden" id="mov_id">
-                <input type="hidden" id="mov_sku">
-                <input type="hidden" id="mov_tipo">
+    <div class="modal-content">
+        <span class="close" onclick="cerrarModalMovimiento()">&times;</span>
+        <h2 id="tituloMovimiento">Registrar Movimiento</h2>
+        <p id="subtituloMovimiento" style="color: #666; margin-bottom: 15px;"></p>
 
-                <div class="form-group">
-                    <label>Cantidad</label>
-                    <input type="number" id="mov_cantidad" required min="1" placeholder="Ej. 5">
-                </div>
+        <form onsubmit="guardarMovimiento(event)">
+            <input type="hidden" id="mov_id">
+            <input type="hidden" id="mov_sku">
+            <input type="hidden" id="mov_tipo">
 
-                <button type="submit" class="btn-submit" id="btnMovimiento">Confirmar</button>
-            </form>
-        </div>
+            <div class="form-group">
+                <label>Cantidad</label>
+                <input type="number" id="mov_cantidad" required min="1" placeholder="Ej. 5">
+            </div>
+
+            <button type="submit" id="btnMovimiento" class="btn-submit">Registrar</button>
+        </form>
     </div>
+</div>
+
 
     <div id="modalEscaner" class="modal">
         <div class="modal-content" style="max-width: 500px; text-align: center;">
