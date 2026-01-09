@@ -2,19 +2,20 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
     <link rel="stylesheet" href="./style.css">
-    <link rel="icon" type="logo_malwaree" href="logo_malwaree.png">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" type="logo_malware" href="logo_malware.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">    <!-- Iconos -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>   <!-- Para escaneo de códigos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>   <!-- Para gráficas -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- Para alertas bonitas -->
     <title>StockPilot</title>
 </head>
 <body>
     <div id="seccion-login" class="login-overlay">
         <div class="login-box">
             <div class="logo-login">
-                <img src="logo_malwaree.png" alt="StockPilot Logo">
+                <img src="logo_malware.png" alt="StockPilot Logo">
             </div>
             <h2>StockPilot</h2>
             <p>Inicia sesión del sistema Malw4ree</p>
@@ -33,166 +34,247 @@
             <p id="errorLogin" style="color: red; display: none; margin-top: 10px;">Error de credenciales</p>
         </div>
     </div>
-
-    <div class="app-container" id="app-principal" style="display: none;">
-        <nav class="sidebar">
-            <div class="logo">
-                <h6>Malw4ree</h6>
-                <h2>StockPilot</h2>
-                <img src="logo_malwaree.png" alt="StockPilot Logo">
+        <div class="app-container" id="app-principal" style="display: none;">
+            <nav class="sidebar">
+                <div class="logo">
+                    <h6>Malw4ree</h6>
+                    <h2>StockPilot</h2>
+                    <img src="logo_malware.png" alt="StockPilot Logo">
+                </div>
+                <ul>
+                    <li onclick="mostrarSeccion('dashboard')" class="active">
+                        <a href="#"><i class="fas fa-home"></i> Panel de Control</a>
+                    </li>
+                    <li onclick="mostrarSeccion('inventario')">
+                        <a href="#"><i class="fas fa-box"></i> Inventario</a>
+                    </li>
+                    <li onclick="mostrarSeccion('historial')">
+                        <a href="#"><i class="fas fa-history"></i> Movimientos</a>
+                    </li>
+                    <li onclick="mostrarSeccion('caja')">
+                        <a href="#"><i class="fas fa-cash-register"></i> Punto de Venta</a>
+                    </li>
+                    <li onclick="mostrarSeccion('configuracion')">
+                        <a href="#"><i class="fas fa-cog"></i> Configuración</a>
+                    </li>
+                    <li onclick="cerrarSesion()" style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <a href="#" style="color: #fc8181;">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+<main class="main-content">
+    <div id="seccion-dashboard">
+        <header>
+            <h1>Panel de Control</h1>
+            <button class="btn-primary" style="background-color: #e53e3e; margin-right: 10px;" onclick="verCorteCaja()">
+                <i class="fas fa-cash-register"></i> Corte del Día
+            </button>
+            <button class="btn-primary" style="background-color: #805ad5; margin-right: 10px;" onclick="iniciarEscaner()">
+                <i class="fas fa-qrcode"></i> Escanear
+            </button>
+            <button class="btn-primary" onclick="abrirModal()">+ Nuevo Producto
+            </button>
+        </header>
+        <div class="cards-container">
+            <div class="card">
+                <p>Valor del Inventario</p>
+                <h2 id="valorTotal">$0.00</h2>
+                    <i class="fas fa-money-bill-wave icon-bg"></i>
             </div>
-            <ul>
-                <li onclick="mostrarSeccion('dashboard')" class="active">
-                    <a href="#"><i class="fas fa-home"></i> Panel de Control</a>
-                </li>
-                <li>
-                    <a href="#"><i class="fas fa-box"></i> Inventario</a>
-                </li>
-                <li onclick="mostrarSeccion('historial')">
-                    <a href="#"><i class="fas fa-history"></i> Movimientos</a>
-                </li>
-                <li onclick="mostrarSeccion('caja')">
-                    <a href="#"><i class="fas fa-cash-register"></i> Punto de Venta</a>
-                
-                <li><a href="#"><i class="fas fa-cog"></i> Configuración</a></li>
-
-                <li onclick="cerrarSesion()" style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <a href="#" style="color: #fc8181;">
-                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                    </a>
-                </li>
-            </ul>
-        </nav>
-
-        <main class="main-content">
-            <div id="seccion-dashboard">
-                <header>
-                    <h1>Panel de Control</h1>
-                    <button class="btn-primary" style="background-color: #805ad5; margin-right: 10px;" onclick="iniciarEscaner()">
-                        <i class="fas fa-qrcode"></i> Escanear
-                    </button>
-
-                <button class="btn-primary" onclick="abrirModal()">+ Nuevo Producto</button>
-                </header>
-
-                <div class="cards-container">
-                    <div class="card">
-                        <p>Valor del Inventario</p>
-                        <h2 id="valorTotal">$0.00</h2>
-                        <i class="fas fa-money-bill-wave icon-bg"></i>
-                    </div>
-                    <div class="card">
-                        <h3>Total Productos</h3>
-                        <h2 id="total-productos">0</h2> 
-                    </div>
-                </div>
-                <div class="charts-container"> <div class="chart-card">
-                    <h3> Distribución de Valor</h3>
-                    <div class="chart-canvas-box">
-                        <canvas id="graficaValor"></canvas>
-                    </div>
-                </div>
-
-                <div class="chart-card">
-                    <h3> Niveles de Stock</h3>
-                    <div class="chart-canvas-box">
-                        <canvas id="graficaStock"></canvas>
-                    </div>
+            <div class="card">
+                <h3>Total Productos</h3>
+                <h2 id="total-productos">0</h2> 
+            </div>
+        </div>
+        <div class="charts-container"> 
+            <div class="chart-card">
+                <h3> Distribución de Valor</h3>
+                <div class="chart-canvas-box">
+                    <canvas id="graficaValor"></canvas>
                 </div>
             </div>
-
-                <div class="table-container">
-                    <h3>Inventario en Tiempo Real</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>SKU</th>
-                                <th>Producto</th>
-                                <th>Stock</th>
-                                <th>Estado</th>
-                                <th>Precio Venta</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaProductos">
-                            </tbody>
-                    </table>
+            <div class="chart-card">
+                <h3> Niveles de Stock</h3>
+                <div class="chart-canvas-box">
+                    <canvas id="graficaStock"></canvas>
                 </div>
             </div>
-
-            <div id="seccion-historial" style="display: none;">
-                <header>
-                    <h1>Historial de Movimientos</h1>
-                </header>
-
-                <div class="table-container">
-                    <h3 style="margin-bottom: 20px; color: #718096;">Registro de Compras y Ventas</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Producto</th>
-                                <th>Tipo</th>
-                                <th>Cantidad</th>
-                                <th>Usuario</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaHistorial">
-                            </tbody>
-                    </table>
+            <div class="chart-card" style="width: 96%; margin: 20px auto;">
+                <h3>Márgenes de Ganancia (Costo vs. Venta)</h3>
+                <div class="chart-canvas-box" style="height: 300px;">
+                    <canvas id="graficaGanancias"></canvas>
                 </div>
             </div>
-
-            <div id="seccion-caja" style="display: none;">
-    <h2>🛒 Punto de Venta</h2>
-    
-    <div class="contenedor-pos">
-        
-        <div class="columna-productos">
-            <input type="text" id="buscador-pos" placeholder="🔍 Buscar producto por nombre o código..." 
-                   style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ddd;"
-                   onkeyup="filtrarProductosPOS()">
-
-            <table class="tabla-moderna">
+        </div>    
+        <div class="table-container">
+        <h3>Inventario en Tiempo Real</h3>
+            <table>
                 <thead>
                     <tr>
+                        <th>SKU</th>
                         <th>Producto</th>
-                        <th>Precio</th>
                         <th>Stock</th>
-                        <th>Acción</th>
+                        <th>Estado</th>
+                        <th>Precio Venta</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
-                <tbody id="tabla-productos-pos">
-                    </tbody>
+                <tbody id="tablaProductos">
+                </tbody>
             </table>
         </div>
+    </div>
+    <div id="seccion-inventario" style="display: none;">
+        <header><h1>Gestión Masiva de Inventario</h1></header>
+        <div style="display: flex; gap: 20px; margin-top: 20px;">
+            <div style="flex: 1; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
+                <i class="fas fa-file-excel" style="font-size: 3em; color: #2ecc71; margin-bottom: 15px;"></i>
+                <h3>Cargar Excel</h3>
+                <p style="color: #666; font-size: 0.9em;">Sube un archivo .xlsx para agregar o actualizar productos masivamente.</p>
+                <input type="file" id="inputExcel" accept=".xlsx" style="margin: 15px 0;">
+                <button class="btn-primary" onclick="subirExcel()" style="width: 100%;">
+                    <i class="fas fa-upload"></i> Subir Archivo
+                </button>
+                <div style="margin-top: 15px; text-align: left; background: #f9f9f9; padding: 10px; font-size: 0.8em;">
+                    <strong>Columnas requeridas:</strong><br>
+                    sku, nombre, precio_compra, precio_venta, stock, reorden
+                </div>
+            </div>
+            <div style="flex: 1; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
+                <i class="fas fa-download" style="font-size: 3em; color: #3498db; margin-bottom: 15px;"></i>
+                <h3>Descargar Inventario</h3>
+                <p style="color: #666; font-size: 0.9em;">Baja todo tu catálogo para respaldar o editar masivamente.</p>
+                
+                <div style="height: 52px;"></div> <button class="btn-primary" onclick="descargarExcel()" style="width: 100%; background-color: #3498db;">
+                    <i class="fas fa-file-download"></i> Descargar .xlsx
+                </button>
+
+                <div style="margin-top: 15px; text-align: left; background: #f0f8ff; padding: 10px; font-size: 0.8em; color: #333;">
+                    <strong>Tip:</strong> Puedes editar este archivo y volver a subirlo en la tarjeta de la izquierda para actualizar precios.
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="seccion-historial" style="display: none;">
+        <header style="display: flex; flex-direction: column; gap: 10px;">
+            <h1>Historial de Movimientos</h1>
+            
+            <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                
+                <div style="display: flex; flex-direction: column;">
+                    <label style="font-size: 0.8em; color: #666;">Desde:</label>
+                    <input type="date" id="filtro_inicio" style="padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+
+                <div style="display: flex; flex-direction: column;">
+                    <label style="font-size: 0.8em; color: #666;">Hasta:</label>
+                    <input type="date" id="filtro_fin" style="padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+
+                <button class="btn-primary" onclick="cargarHistorial()" style="height: 38px; margin-top: auto;">
+                    <i class="fas fa-search"></i> Filtrar
+                </button>
+                
+                <button class="btn-primary" onclick="limpiarFiltros()" style="height: 38px; margin-top: auto; background-color: #718096;">
+                    Ver Todo
+                </button>
+
+                <div style="flex-grow: 1;"></div>
+
+                <button class="btn-primary" onclick="depurarHistorial()" style="height: 38px; margin-top: auto; background-color: #e53e3e;" title="Borrar historial viejo">
+                    <i class="fas fa-trash-alt"></i> Depurar Antiguos
+                </button>
+            </div>
+        </header>
+        <div class="table-container">
+            <h3 style="margin-bottom: 20px; color: #718096;">Registro de Compras y Ventas</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Producto</th>
+                        <th>Tipo</th>
+                        <th>Cantidad</th>
+                        <th>Usuario</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaHistorial"></tbody>
+            </table>
+        </div>
+    </div>
+    <div id="seccion-caja" style="display: none;">
+        <h2>🛒 Punto de Venta</h2>
+        <div class="contenedor-pos">
+            <div class="columna-productos">
+            <input type="text" id="buscador-pos" placeholder="🔍 Buscar producto por nombre o código..." 
+                style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ddd;"
+                onkeyup="filtrarProductosPOS()">
+                <table class="tabla-moderna">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Stock</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-productos-pos">
+                        </tbody>
+                </table>
+            </div>
             <div class="columna-ticket">
                 <div class="ticket-header">
                     <h3>Ticket de Venta</h3>
                     <small id="fecha-ticket">--/--/----</small>
                 </div>
-
                 <div class="ticket-body" id="lista-carrito">
                     <p style="text-align: center; color: #aaa; margin-top: 20px;">El carrito está vacío</p>
                 </div>
-
                 <div class="ticket-total">
                     <span>TOTAL A PAGAR</span>
                     <span class="total-grande" id="total-carrito">$0.00</span>
                 </div>
-
                 <button class="btn" style="background-color: #48bb78; width: 100%; margin-top: 10px; padding: 15px; font-size: 1.2em;" onclick="finalizarCompra()">
                     <i class="fas fa-cash-register"></i> COBRAR
-                </button>
-                
+                </button>                    
                 <button class="btn" style="background-color: #fc8181; width: 100%; margin-top: 5px;" onclick="limpiarCarrito()">
                     <i class="fas fa-trash"></i> Cancelar
                 </button>
             </div>
-
         </div>
     </div>
+    
+    <div id="seccion-configuracion" style="display: none;">
+        <header><h1>Configuración del Negocio</h1></header>
+        <div class="contenedor-config" style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <form onsubmit="guardarConfiguracion(event)">
+            <div class="form-group">
+                <label>Nombre de la Tienda</label>
+                    <input type="text" id="conf_nombre" required placeholder="Ej. Abarrotes Don Pepe">
+            </div>
+            <div class="form-group">
+                            <label>Dirección</label>
+                            <input type="text" id="conf_direccion" required placeholder="Calle, Número, Colonia">
+                        </div>
 
+                        <div class="form-group">
+                            <label>Teléfono de Contacto</label>
+                            <input type="text" id="conf_telefono" placeholder="Para dudas o pedidos">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mensaje en el Ticket</label>
+                            <textarea id="conf_mensaje" rows="3" style="width: 100%; padding: 10px;" placeholder="Ej. ¡Vuelva pronto!"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 20px;">
+                            <i class="fas fa-save"></i> Guardar Cambios
+                        </button>
+                    </form>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -309,6 +391,29 @@
             </p>
         </div>
     </div>
+
+    <div id="modalCorte" class="modal">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <span class="close" onclick="document.getElementById('modalCorte').style.display='none'">&times;</span>
+        
+        <h2 style="color: #2d3748;">Corte de Caja</h2>
+        <p style="color: #718096; margin-bottom: 20px;" id="corteFecha">--/--/----</p>
+
+        <div style="background: #f7fafc; padding: 20px; border-radius: 10px; border: 1px dashed #cbd5e0;">
+            <p>Total Vendido Hoy:</p>
+            <h1 style="color: #48bb78; font-size: 2.5em; margin: 5px 0;" id="corteTotal">$0.00</h1>
+            
+            <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 0.9em; color: #4a5568;">
+                <span>Productos: <strong id="corteItems">0</strong></span>
+                <span>Movimientos: <strong id="corteTransacciones">0</strong></span>
+            </div>
+        </div>
+
+        <button class="btn-primary" onclick="document.getElementById('modalCorte').style.display='none'" style="width: 100%; margin-top: 20px;">
+            Aceptar
+        </button>
+    </div>
+</div>
 
     <script src="script.js"></script>
 </body>

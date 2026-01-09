@@ -1,7 +1,7 @@
 // --- CONFIGURACIÓN ---
 // ✅ MODO LOCAL (Activo)
 // http://localhost:5500
-//API_URL = "http://127.0.0.1:8000";
+// API_URL = "http://127.0.0.1:8000";
 
 // ❌ MODO NUBE (Comentado con //)
 API_URL = "https://stockpilot-lhep.onrender.com";
@@ -219,12 +219,12 @@ window.onclick = function(event) {
     }
 }
 
-// --- FUNCIÓN PARA GUARDAR (POST) ---
+// --- FUNCIÓN PARA GUARDAR (POST) - VERSIÓN SWEETALERT ---
 async function guardarProducto(event) {
-    event.preventDefault(); // Evita que la página se recargue sola
-    const token = localStorage.getItem("stockpilot_token"); // 👈 Recuperar Token
+    event.preventDefault(); // Evita recarga
+    const token = localStorage.getItem("stockpilot_token");
 
-    // 1. Capturar los datos del formulario
+    // 1. Capturar los datos (USANDO TUS IDs EXACTOS)
     const nuevoProducto = {
         sku: document.getElementById("sku").value,
         nombre: document.getElementById("nombre").value,
@@ -239,27 +239,50 @@ async function guardarProducto(event) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}` // 👈 ¡ESTO FALTABA!
+                "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify(nuevoProducto)
         }); 
 
         if (respuesta.ok) {
-            alert("Producto guardado con éxito");
-            cerrarModal();
-            document.getElementById("formProducto").reset(); // Limpiar formulario
-            cargarProductos(); // Recargar tabla automáticamente
-            cargarFinanzas();  // Recargar dinero automáticamente
+            // A) ÉXITO: Cerramos y limpiamos primero
+            cerrarModal(); 
+            document.getElementById("formProducto").reset(); 
+            
+            // B) Mostramos la alerta bonita
+            Swal.fire({
+                title: '¡Producto Guardado!',
+                text: 'Se ha registrado correctamente en el sistema.',
+                icon: 'success',
+                timer: 2000, // Se cierra sola en 2 segundos
+                showConfirmButton: false
+            });
+
+            // C) Recargamos las tablas
+            cargarProductos(); 
+            cargarFinanzas();
+            
         } else {
-            // CAMBIAMOS ESTO PARA LEER EL ERROR REAL
+            // A) ERROR DEL SERVIDOR
             const errorData = await respuesta.json();
-            console.log("Error detallado:", errorData); // Para verlo en consola F12
-            alert("Error del Servidor: " + JSON.stringify(errorData, null, 2)); 
+            console.log("Error detallado:", errorData);
+            
+            // Alerta bonita de error
+            Swal.fire({
+                title: 'Error',
+                text: errorData.detail || "No se pudo guardar el producto",
+                icon: 'error'
+            });
         }
 
     } catch (error) {
+        // B) ERROR DE CONEXIÓN
         console.error("Error de conexión:", error);
-        alert("No se pudo conectar con el servidor.");
+        Swal.fire({
+            title: 'Sin Conexión',
+            text: 'No se pudo conectar con el servidor.',
+            icon: 'error'
+        });
     }
 }
 
@@ -341,10 +364,22 @@ async function guardarMovimiento(event) {
 
 // --- NAVEGACIÓN (CAMBIAR PESTAÑAS) ---
 function mostrarSeccion(seccion) {
-    // 1. Ocultamos todo
-    document.getElementById("seccion-dashboard").style.display = "none";
-    document.getElementById("seccion-historial").style.display = "none";
-    document.getElementById("seccion-caja").style.display = "none";
+    // 1. Ocultar TODAS las secciones (¡Aquí estaba el error, faltaba agregar inventario!)
+    const secciones = [
+        "seccion-dashboard", 
+        "seccion-historial", 
+        "seccion-caja", 
+        "seccion-configuracion", 
+        "seccion-inventario" // 👈 ¡ESTE ES EL IMPORTANTE!
+    ];
+    
+    // Apagamos todas las secciones
+    secciones.forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            elemento.style.display = "none";
+        }
+    });
     
     // 2. Quitamos la clase 'active' del menú lateral
     document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
@@ -361,14 +396,36 @@ function mostrarSeccion(seccion) {
         // --- NUEVO: Lógica para la Caja ---
         document.getElementById("seccion-caja").style.display = "block";
         cargarProductosPOS(); // 👇 Esta función la crearemos ahora
+    }else if (seccion === 'configuracion') {
+    document.getElementById("seccion-configuracion").style.display = "block";
+    cargarConfiguracion(); // <--- Llamamos a la función para traer los datos
+    }else if (seccion === 'inventario') { 
+        // <--- 2. LÓGICA NUEVA PARA EL BOTÓN DE INVENTARIO
+        const divInv = document.getElementById("seccion-inventario");
+        if(divInv) {
+            divInv.style.display = "block";
+        } else {
+            console.error("Falta crear el <div id='seccion-inventario'> en el HTML");
+        }
     }
 }
 
 // --- CARGAR DATOS DEL HISTORIAL (CORREGIDO) ---
+// --- CARGAR HISTORIAL (AHORA CON FILTROS) ---
 async function cargarHistorial() {
     const token = localStorage.getItem("stockpilot_token");
+    
+    // 1. Leer las fechas de los inputs
+    const inicio = document.getElementById("filtro_inicio").value;
+    const fin = document.getElementById("filtro_fin").value;
+
+    // 2. Construir la URL con parámetros (query params)
+    let url = `${API_URL}/movimientos/?`;
+    if (inicio) url += `fecha_inicio=${inicio}&`;
+    if (fin) url += `fecha_fin=${fin}`;
+
     try {
-        const respuesta = await fetch(`${API_URL}/movimientos/`, {
+        const respuesta = await fetch(url, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -376,54 +433,121 @@ async function cargarHistorial() {
             }
         });
         
-        if (!respuesta.ok) {
-             if (respuesta.status === 401) { cerrarSesion(); return; }
-             throw new Error("Error al cargar historial");
-        }
+        if (respuesta.ok) {
+            const movimientos = await respuesta.json();
+            const cuerpoTabla = document.getElementById('tablaHistorial');
+            cuerpoTabla.innerHTML = ""; 
 
-        const movimientos = await respuesta.json();
-        
-        const cuerpoTabla = document.getElementById('tablaHistorial');
-        cuerpoTabla.innerHTML = ""; 
-
-        movimientos.forEach(mov => {
-            // ---------------------------------------------------------
-            // 🔧 CORRECCIÓN BUG FECHA:
-            // 1. Buscamos el dato en 'fecha' O en 'fecha_movimiento' por si acaso
-            const fechaCruda = mov.fecha || mov.fecha_movimiento;
-            let fechaTexto = "Sin Fecha";
-
-            // 2. Validamos antes de formatear
-            if (fechaCruda) {
-                const fechaObj = new Date(fechaCruda);
-                // Si la fecha es válida, la formateamos bonito
-                if (!isNaN(fechaObj)) {
-                    fechaTexto = fechaObj.toLocaleString('es-MX', {
-                        day: '2-digit', month: '2-digit', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit', hour12: true
-                    });
-                }
+            if (movimientos.length === 0) {
+                cuerpoTabla.innerHTML = '<tr><td colspan="5" style="text-align:center;">No hay movimientos en este rango</td></tr>';
+                return;
             }
-            // ---------------------------------------------------------
 
-            const colorTipo = mov.tipo_movimiento === "ENTRADA" ? "green" : "red";
-            const nombreProd = mov.producto ? mov.producto.nombre : `Producto Desconocido (ID ${mov.producto_id})`;
+            movimientos.forEach(mov => {
+                const fechaRaw = mov.fecha_movimiento || mov.fecha; // Compatibilidad
+                const fechaObj = new Date(fechaRaw);
+                const fechaTexto = fechaObj.toLocaleString('es-MX');
 
-            const fila = `
-                <tr>
-                    <td>${fechaTexto}</td> <td><strong>${nombreProd}</strong></td>
-                    <td style="color: ${colorTipo}; font-weight: bold;">
-                        ${mov.tipo_movimiento}
-                    </td>
-                    <td>${mov.cantidad}</td>
-                    <td>${mov.usuario_responsable}</td>
-                </tr>
-            `;
-            cuerpoTabla.innerHTML += fila;
-        });
+                const colorTipo = mov.tipo_movimiento === "ENTRADA" ? "green" : "red";
+                let celdaProducto = "";
+                if (mov.producto) {
+                    celdaProducto = `
+                        <strong>${mov.producto.nombre}</strong><br>
+                        <small style="color: #666;">SKU: ${mov.producto.sku}</small>
+                    `;
+                } else {
+                    celdaProducto = `<span style="color:red;">Producto Eliminado (ID ${mov.producto_id})</span>`;
+                }
 
+                cuerpoTabla.innerHTML += `
+                    <tr>
+                        <td>${fechaTexto}</td>
+                        <td>${celdaProducto}</td>  <td style="color: ${colorTipo}; font-weight: bold;">${mov.tipo_movimiento}</td>
+                        <td>${mov.cantidad}</td>
+                        <td>${mov.usuario_responsable}</td>
+                    </tr>`;
+            });
+        }
     } catch (error) {
         console.error("Error historial:", error);
+    }
+}
+
+function limpiarFiltros() {
+    document.getElementById("filtro_inicio").value = "";
+    document.getElementById("filtro_fin").value = "";
+    cargarHistorial(); // Cargar todo de nuevo
+}
+
+// --- DEPURAR (BORRAR) HISTORIAL ANTIGUO ---
+// --- DEPURAR HISTORIAL (VERSIÓN VISUAL PRO) ---
+async function depurarHistorial() {
+    
+    // 1. PRIMERA VENTANA: Pedir la Fecha
+    const { value: fechaLimite } = await Swal.fire({
+        title: '⚠️ ZONA DE PELIGRO',
+        html: 'Esta acción es <b>irreversible</b>.<br>Se borrará todo el historial ANTERIOR a la fecha que elijas.',
+        icon: 'warning',
+        input: 'date', // Un calendario bonito
+        inputLabel: 'Selecciona la Fecha Límite',
+        showCancelButton: true,
+        confirmButtonColor: '#d33', // Rojo peligro
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Continuar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    // Si el usuario cancela o no pone fecha, paramos
+    if (!fechaLimite) return;
+
+    // 2. SEGUNDA VENTANA: Pedir Contraseña
+    const { value: clave } = await Swal.fire({
+        title: '🔒 SEGURIDAD REQUERIDA',
+        text: `Estás a punto de borrar registros anteriores al ${fechaLimite}. Confirma tu identidad.`,
+        input: 'password',
+        inputPlaceholder: 'Escribe la clave de administrador',
+        inputAttributes: {
+            autocapitalize: 'off',
+            autocorrect: 'off'
+        },
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'BORRAR DEFINITIVAMENTE',
+        cancelButtonText: 'Me arrepentí',
+        showLoaderOnConfirm: true, // Muestra un circulito cargando mientras borra
+        preConfirm: async (passwordIngresada) => {
+            // Aquí hacemos la petición al servidor DENTRO de la alerta
+            try {
+                const token = localStorage.getItem("stockpilot_token");
+                const url = `${API_URL}/movimientos/limpiar?fecha_limite=${fechaLimite}&clave_admin=${passwordIngresada}`;
+                
+                const response = await fetch(url, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || "Error desconocido");
+                }
+                
+                return data; // Si todo sale bien, pasamos los datos
+            } catch (error) {
+                Swal.showValidationMessage(`Error: ${error.message}`); // Muestra el error en la misma ventanita
+            }
+        }
+    });
+
+    // 3. RESULTADO FINAL
+    if (clave) {
+        // Si llegamos aquí es porque la clave fue correcta y se borró
+        Swal.fire({
+            title: '¡Depurado!',
+            text: clave.mensaje, // El mensaje que viene del backend
+            icon: 'success'
+        });
+        cargarHistorial(); // Refrescamos la tabla
     }
 }
 
@@ -605,7 +729,6 @@ async function guardarEdicion(event) {
 // --- LÓGICA DE GRÁFICAS (Chart.js) ---
 
 let chartValor = null; // Variables globales para poder destruir y redibujar
-let chartStock = null;
 
 function renderizarGraficos(productos) {
     // 1. Preparar los datos
@@ -658,7 +781,7 @@ function renderizarGraficos(productos) {
             datasets: [{
                 label: 'Unidades en Stock',
                 data: stocks,
-                backgroundColor: '#3dc4c6ff',
+                backgroundColor: '#610a0bff',
                 borderRadius: 5
             }]
         },
@@ -670,6 +793,81 @@ function renderizarGraficos(productos) {
             }
         }
     });
+    // ... (Aquí arriba está el código de chartStock) ...
+
+    // 4. Configurar Gráfica de GANANCIAS (Líneas Comparativas)
+    // Extraemos los datos de precio
+    const preciosCompra = topProductos.map(p => p.precio_compra);
+    const preciosVenta = topProductos.map(p => p.precio_venta);
+
+    // Contexto del canvas
+    const ctxGanancias = document.getElementById('graficaGanancias');
+
+    // Validamos que el elemento exista en el HTML antes de dibujar
+    if (ctxGanancias) {
+        // Variable global para controlar esta gráfica (agrégala al inicio del archivo si quieres ser muy estricto, o usa window)
+        if (window.chartGanancias) window.chartGanancias.destroy();
+
+        window.chartGanancias = new Chart(ctxGanancias.getContext('2d'), {
+            type: 'line', // Tipo lineal como pediste
+            data: {
+                labels: nombres,
+                datasets: [
+                    {
+                        label: 'Precio Venta ($)',
+                        data: preciosVenta,
+                        borderColor: '#48bb78', // Verde (Ganancia)
+                        backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#48bb78',
+                        pointRadius: 5, // Puntos visibles
+                        tension: 0.3, // Curvatura suave
+                        fill: true
+                    },
+                    {
+                        label: 'Costo Compra ($)',
+                        data: preciosCompra,
+                        borderColor: '#e53e3e', // Rojo (Costo)
+                        backgroundColor: 'rgba(229, 62, 62, 0.1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#e53e3e',
+                        pointRadius: 5,
+                        borderDash: [5, 5], // Línea punteada para diferenciar mejor
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            footer: function(tooltipItems) {
+                                // Calculamos la ganancia exacta al pasar el mouse
+                                const venta = tooltipItems[0].parsed.y;
+                                const compra = tooltipItems[1].parsed.y;
+                                return 'Ganancia Neta: $' + (venta - compra).toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) { return '$' + value; } // Pone signo de pesos
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
 
 // --- LÓGICA DEL PUNTO DE VENTA (POS) ---
@@ -785,12 +983,14 @@ function limpiarCarrito() {
 }
 
 
+// --- FINALIZAR COMPRA (CORREGIDO CON SWEETALERT Y PDF) ---
 async function finalizarCompra() {
-    if (carrito.length === 0) return alert("El carrito está vacío");
+    // Usamos Swal también para el carrito vacío (más bonito)
+    if (carrito.length === 0) return Swal.fire('Carrito vacío', 'Agrega productos antes de cobrar', 'warning');
 
     const token = localStorage.getItem("stockpilot_token");
     
-    // 1. Preparamos los datos como le gustan a Python
+    // 1. Preparamos los datos
     const itemsParaEnviar = carrito.map(item => ({
         producto_id: item.id,
         cantidad: item.cantidad
@@ -798,10 +998,10 @@ async function finalizarCompra() {
 
     const datosVenta = {
         items: itemsParaEnviar,
-        usuario_responsable: "admin" // O el usuario real si lo guardaste
+        usuario_responsable: "admin" 
     };
 
-    // 2. Enviamos al servidor
+    // 2. Enviamos al servidor (Venta)
     try {
         const respuesta = await fetch(`${API_URL}/ventas/checkout`, {
             method: "POST",
@@ -813,17 +1013,252 @@ async function finalizarCompra() {
         });
 
         if (respuesta.ok) {
-            // 3. ÉXITO
-            // Reproducir sonido de caja registradora (Opcional)
-            // new Audio('kaching.mp3').play();
+            // --- ÉXITO ---
             
-            alert("¡Venta registrada con éxito!");
-            limpiarCarrito(); // Borra la lista visual
-            cargarProductos(); // Actualiza el stock en la tabla izquierda
-            cargarFinanzas();  // Actualiza el dinero en el dashboard
+            // A) Alerta bonita
+            Swal.fire({
+                title: '¡Venta Exitosa!',
+                text: 'Generando ticket PDF...',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            // B) PEDIR EL PDF (Esta parte te faltaba)
+            try {
+                const resTicket = await fetch(`${API_URL}/ventas/ticket_pdf`, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(datosVenta)
+                });
+
+                if (resTicket.ok) {
+                    const blob = await resTicket.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ticket_${new Date().getTime()}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                }
+            } catch (errPdf) {
+                console.error("Error generando PDF", errPdf);
+            }
+
+            // C) Limpiar todo
+            limpiarCarrito();
+            cargarProductos();
+            cargarFinanzas();
+            
         } else {
+            // --- ERROR DE SERVIDOR ---
             const error = await respuesta.json();
-            alert("❌ Error: " + (error.detail || "No se pudo procesar"));
+            Swal.fire('Error', error.detail || "No se pudo procesar la venta", 'error');
+        }
+
+    } catch (error) {
+        // --- ERROR DE RED ---
+        console.error(error);
+        Swal.fire('Error de conexión', 'No se pudo conectar con el servidor', 'error');
+    }
+}
+
+
+// --- LÓGICA DE CONFIGURACIÓN ---
+
+async function cargarConfiguracion() {
+    const token = localStorage.getItem("stockpilot_token");
+    try {
+        const respuesta = await fetch(`${API_URL}/configuracion/`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (respuesta.ok) {
+            const config = await respuesta.json();
+            // Rellenar el formulario
+            document.getElementById("conf_nombre").value = config.nombre_tienda;
+            document.getElementById("conf_direccion").value = config.direccion;
+            document.getElementById("conf_telefono").value = config.telefono;
+            document.getElementById("conf_mensaje").value = config.mensaje_ticket;
+            
+    
+        }
+    } catch (error) {
+        console.error("Error cargando config:", error);
+    }
+}
+
+async function guardarConfiguracion(event) {
+    event.preventDefault();
+    const token = localStorage.getItem("stockpilot_token");
+
+    const datos = {
+        nombre_tienda: document.getElementById("conf_nombre").value,
+        direccion: document.getElementById("conf_direccion").value,
+        telefono: document.getElementById("conf_telefono").value,
+        mensaje_ticket: document.getElementById("conf_mensaje").value
+    };
+
+    try {
+        const respuesta = await fetch(`${API_URL}/configuracion/`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` 
+            },
+            body: JSON.stringify(datos)
+        });
+
+        if (respuesta.ok) {
+            alert(" Configuración actualizada correctamente");
+            cargarConfiguracion(); // Recargar para ver cambios
+        } else {
+            alert("Error al guardar");
+        }
+    } catch (error) {
+        alert("Error de conexión");
+    }
+}
+
+// --- IMPORTAR EXCEL ---
+async function subirExcel() {
+    const input = document.getElementById('inputExcel');
+    if (!input.files[0]) return alert("Selecciona un archivo primero");
+
+    const formData = new FormData();
+    formData.append("file", input.files[0]);
+
+    const token = localStorage.getItem("stockpilot_token");
+
+    try {
+        // Mostrar indicador de carga (opcional)
+        document.body.style.cursor = "wait"; 
+        
+        const respuesta = await fetch(`${API_URL}/productos/importar_excel`, {
+            method: "POST",
+            headers: { 
+                "Authorization": `Bearer ${token}` 
+                // NO poner Content-Type, el navegador lo pone solo para FormData
+            },
+            body: formData
+        });
+
+        const datos = await respuesta.json();
+        
+        if (respuesta.ok) {
+            alert(`✅ Éxito:\n- Nuevos: ${datos.nuevos}\n- Actualizados: ${datos.actualizados}`);
+            input.value = ""; // Limpiar input
+        } else {
+            alert("❌ Error: " + datos.detail);
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Error al subir archivo");
+    } finally {
+        document.body.style.cursor = "default";
+    }
+}
+
+// --- EXPORTAR EXCEL ---
+async function descargarExcel() {
+    const token = localStorage.getItem("stockpilot_token");
+    
+    try {
+        document.body.style.cursor = "wait"; // Poner relojito de espera
+
+        const respuesta = await fetch(`${API_URL}/productos/exportar_excel`, {
+            method: "GET",
+            headers: { 
+                "Authorization": `Bearer ${token}` 
+            }
+        });
+
+        if (respuesta.ok) {
+            // Convertir la respuesta en un archivo descargable (Blob)
+            const blob = await respuesta.blob();
+            const url = window.URL.createObjectURL(blob);
+            
+            // Crear enlace invisible y hacer clic
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `inventario_${new Date().toISOString().slice(0,10)}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            
+        } else {
+            alert("❌ Error al descargar el archivo");
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Error de conexión");
+    } finally {
+        document.body.style.cursor = "default"; // Quitar relojito
+    }
+}
+
+
+// --- CORTE DE CAJA ---
+async function verCorteCaja() {
+    const token = localStorage.getItem("stockpilot_token");
+
+    try {
+        const respuesta = await fetch(`${API_URL}/reportes/corte_dia`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (respuesta.ok) {
+            const datos = await respuesta.json();
+            
+            // Llenar el modal con los datos
+            document.getElementById("corteFecha").innerText = datos.fecha;
+            document.getElementById("corteTotal").innerText = `$${datos.total_vendido.toLocaleString()}`;
+            document.getElementById("corteItems").innerText = datos.items_vendidos;
+            document.getElementById("corteTransacciones").innerText = datos.transacciones;
+            
+            // Mostrar modal
+            document.getElementById("modalCorte").style.display = "block";
+        } else {
+            alert("Error al obtener el corte");
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Error de conexión");
+    }
+}
+
+
+// --- CORTE DE CAJA ---
+async function verCorteCaja() {
+    const token = localStorage.getItem("stockpilot_token");
+
+    try {
+        const respuesta = await fetch(`${API_URL}/reportes/corte_dia`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (respuesta.ok) {
+            const datos = await respuesta.json();
+            
+            // Llenar el modal con los datos
+            document.getElementById("corteFecha").innerText = datos.fecha;
+            document.getElementById("corteTotal").innerText = `$${datos.total_vendido.toLocaleString()}`;
+            document.getElementById("corteItems").innerText = datos.items_vendidos;
+            document.getElementById("corteTransacciones").innerText = datos.transacciones;
+            
+            // Mostrar modal
+            document.getElementById("modalCorte").style.display = "block";
+        } else {
+            alert("Error al obtener el corte");
         }
 
     } catch (error) {

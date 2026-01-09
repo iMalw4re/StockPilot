@@ -3,7 +3,7 @@
 # ==========================================
 #librerias de seguridad y autenticacion 
 #En programación, eso se llama JWT (JSON Web Token). Vamos a crear una ruta que reciba usuario y contraseña, y si son correctos, devuelva ese Token.
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from jose import jwt, JWTError
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
@@ -16,6 +16,18 @@ from typing import List, Optional # Agregamos Optional
 from passlib.context import CryptContext # Para hashear contraseñas
 import models # Importamos los modelos
 import database # Importamos la configuración de la base de datos
+
+# --- IMPORTS PARA PDF (Pégalos arriba en main.py) ---
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from io import BytesIO
+from fastapi.responses import StreamingResponse
+
+# Imports para Excel y Archivos
+import pandas as pd
+from fastapi import UploadFile, File
+from io import BytesIO
 
 models.Base.metadata.create_all(bind=database.engine) # 1. Crear las tablas automáticamente si no existen (Aunque ya las creaste en SQL, esto asegura que Python las reconozca)
 
@@ -128,6 +140,15 @@ class ItemVenta(BaseModel):
 class VentaCreate(BaseModel):
     items: List[ItemVenta] # Recibe una lista de items
     usuario_responsable: str
+
+# --- SCHEMA DE CONFIGURACIÓN ---
+class ConfiguracionUpdate(BaseModel):
+    nombre_tienda: str
+    direccion: str
+    telefono: str
+    mensaje_ticket: str
+
+
 # --- RUTAS ---
 
 @app.post("/productos/", response_model=ProductoResponse)
@@ -206,19 +227,28 @@ def registrar_movimiento(
         raise HTTPException(status_code=500, detail=str(e))
 
 # --- ESTO ES LO QUE TE FALTA ---
+# --- OBTENER MOVIMIENTOS CON FILTRO DE FECHA ---
 @app.get("/movimientos/")
-def leer_movimientos(
-    db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_user)
+def obtener_movimientos(
+    fecha_inicio: str = None, # Formato YYYY-MM-DD
+    fecha_fin: str = None,
+    db: Session = Depends(get_db)
 ):
-    # Usamos joinedload para traer también los datos del Producto (nombre, sku)
-    # y ordenamos por ID descendente para ver los más nuevos primero.
-    movimientos = db.query(models.Movimiento)\
-        .options(joinedload(models.Movimiento.producto))\
-        .order_by(models.Movimiento.id.desc())\
-        .all()
+    query = db.query(models.Movimiento).options(joinedload(models.Movimiento.producto))
+
+    # Aplicar filtros si el usuario mandó fechas
+    if fecha_inicio:
+        # Convertimos texto a fecha y filtramos
+        fecha_dt = datetime.strptime(fecha_inicio, "%Y-%m-%d")
+        query = query.filter(models.Movimiento.fecha_movimiento >= fecha_dt)
     
-    return movimientos
+    if fecha_fin:
+        # Sumamos un día a la fecha fin para incluir todo ese día (hasta las 23:59)
+        fecha_dt = datetime.strptime(fecha_fin, "%Y-%m-%d") + timedelta(days=1)
+        query = query.filter(models.Movimiento.fecha_movimiento < fecha_dt)
+
+    # Ordenar del más nuevo al más viejo
+    return query.order_by(models.Movimiento.fecha_movimiento.desc()).all()
 
 @app.post("/registrar/")
 def registrar_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
@@ -343,3 +373,277 @@ def procesar_venta(
     except Exception as e:
         db.rollback() # Si algo falla, deshacemos todo
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+# --- RUTAS DE CONFIGURACIÓN ---
+
+@app.get("/configuracion/")
+def obtener_configuracion(db: Session = Depends(get_db)):
+    # Buscamos la configuración (siempre será el ID 1)
+    config = db.query(models.Configuracion).first()
+    
+    # Si no existe (es la primera vez), la creamos con valores por defecto
+    if not config:
+        config = models.Configuracion()
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+    
+    return config
+
+@app.post("/configuracion/")
+def guardar_configuracion(
+    datos: ConfiguracionUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user) # Solo admins
+):
+    config = db.query(models.Configuracion).first()
+    
+    # Actualizamos los campos
+    config.nombre_tienda = datos.nombre_tienda
+    config.direccion = datos.direccion
+    config.telefono = datos.telefono
+    config.mensaje_ticket = datos.mensaje_ticket
+    
+    db.commit()
+    db.refresh(config)
+    return {"mensaje": "Configuración guardada", "config": config}
+
+
+# --- GENERACIÓN DE TICKET PDF ---
+@app.post("/ventas/ticket_pdf")
+def generar_ticket(
+    venta: VentaCreate, 
+    db: Session = Depends(get_db)
+):
+    # 1. Obtener datos de la tienda
+    config = db.query(models.Configuracion).first()
+    nombre_tienda = config.nombre_tienda if config else "Mi Tienda"
+    direccion = config.direccion if config else ""
+    mensaje = config.mensaje_ticket if config else "Gracias por su compra"
+
+    # 2. Crear el archivo en memoria (Buffer)
+    buffer = BytesIO()
+    # Usamos un tamaño de página tipo Ticket (ancho 3 pulgadas, alto variable o A4 recortado)
+    # Por simplicidad usaremos tamaño carta pero dibujaremos arriba a la izquierda
+    c = canvas.Canvas(buffer, pagesize=letter)
+    
+    # 3. Dibujar el Encabezado
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(100, 750, nombre_tienda) # X, Y (Y empieza desde abajo)
+    
+    c.setFont("Helvetica", 10)
+    c.drawString(100, 735, direccion)
+    c.drawString(100, 720, f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    c.drawString(100, 705, f"Atendido por: {venta.usuario_responsable}")
+    
+    # Línea separadora
+    c.line(100, 695, 500, 695)
+
+    # 4. Dibujar los Productos
+    y = 675
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(100, y, "CANT")
+    c.drawString(140, y, "PRODUCTO")
+    c.drawString(350, y, "PRECIO U.")
+    c.drawString(430, y, "TOTAL")
+    
+    y -= 20
+    c.setFont("Helvetica", 10)
+    
+    total_venta = 0
+    
+    for item in venta.items:
+        # Buscamos el nombre y precio real del producto en la BD
+        prod = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
+        if prod:
+            subtotal = prod.precio_venta * item.cantidad
+            total_venta += subtotal
+            
+            c.drawString(100, y, str(item.cantidad))
+            c.drawString(140, y, prod.nombre[:25]) # Recortar nombre si es muy largo
+            c.drawString(350, y, f"${prod.precio_venta:,.2f}")
+            c.drawString(430, y, f"${subtotal:,.2f}")
+            y -= 15
+
+    # 5. Dibujar Total y Pie de página
+    c.line(100, y-5, 500, y-5)
+    y -= 25
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(350, y, "TOTAL:")
+    c.drawString(430, y, f"${total_venta:,.2f}")
+    
+    y -= 40
+    c.setFont("Helvetica-Oblique", 10)
+    c.drawString(100, y, mensaje)
+    
+    # 6. Guardar PDF
+    c.showPage()
+    c.save()
+    
+    buffer.seek(0)
+    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=ticket.pdf"})
+
+    # --- IMPORTAR PRODUCTOS DESDE EXCEL ---
+@app.post("/productos/importar_excel")
+async def importar_excel(
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user)
+):
+    # 1. Leer el archivo Excel con Pandas
+    contents = await file.read()
+    df = pd.read_excel(BytesIO(contents))
+    
+    # 2. Validar que tenga las columnas correctas
+    columnas_necesarias = ['sku', 'nombre', 'precio_compra', 'precio_venta', 'stock', 'reorden']
+    # Convertimos los nombres de columnas a minúsculas por si acaso
+    df.columns = [c.lower() for c in df.columns]
+    
+    if not all(col in df.columns for col in columnas_necesarias):
+        raise HTTPException(status_code=400, detail=f"El Excel debe tener las columnas: {columnas_necesarias}")
+
+    productos_agregados = 0
+    productos_actualizados = 0
+
+    # 3. Recorrer cada fila del Excel
+    for index, row in df.iterrows():
+        sku_buscado = str(row['sku']) # Asegurar que sea texto
+        
+        # Buscar si ya existe
+        producto_existente = db.query(models.Producto).filter(models.Producto.sku == sku_buscado).first()
+        
+        if producto_existente:
+            # ACTUALIZAR (Opcional: Si quieres que el Excel actualice precios/stock)
+            producto_existente.nombre = row['nombre']
+            producto_existente.precio_compra = row['precio_compra']
+            producto_existente.precio_venta = row['precio_venta']
+            producto_existente.stock_actual = int(row['stock']) # Pandas a veces lee floats
+            producto_existente.punto_reorden = int(row['reorden'])
+            productos_actualizados += 1
+        else:
+            # CREAR NUEVO
+            nuevo_prod = models.Producto(
+                sku = sku_buscado,
+                nombre = row['nombre'],
+                precio_compra = row['precio_compra'],
+                precio_venta = row['precio_venta'],
+                stock_actual = int(row['stock']),
+                punto_reorden = int(row['reorden'])
+            )
+            db.add(nuevo_prod)
+            productos_agregados += 1
+            
+    db.commit()
+    return {
+        "mensaje": "Proceso completado", 
+        "nuevos": productos_agregados, 
+        "actualizados": productos_actualizados
+    }
+
+# --- EXPORTAR INVENTARIO A EXCEL ---
+@app.get("/productos/exportar_excel")
+def exportar_excel(
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user)
+):
+    # 1. Traer todos los productos de la BD
+    productos = db.query(models.Producto).all()
+    
+    # 2. Convertirlos a una lista de diccionarios (formato para Pandas)
+    data = []
+    for p in productos:
+        data.append({
+            "sku": p.sku,
+            "nombre": p.nombre,
+            "precio_compra": p.precio_compra,
+            "precio_venta": p.precio_venta,
+            "stock": p.stock_actual,
+            "reorden": p.punto_reorden
+        })
+    
+    # 3. Crear el DataFrame
+    df = pd.DataFrame(data)
+    
+    # 4. Guardar en memoria (BytesIO) en vez de disco duro
+    output = BytesIO()
+    # Usamos 'openpyxl' como motor para escribir xlsx
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name="Inventario")
+        
+    output.seek(0)
+    
+    # 5. Enviar el archivo al navegador
+    headers = {"Content-Disposition": "attachment; filename=inventario_completo.xlsx"}
+    return StreamingResponse(output, headers=headers, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+# --- REPORTE DE CORTE DE CAJA (VENTAS DEL DÍA) ---
+# --- REPORTE DE CORTE DE CAJA (CORREGIDO) ---
+@app.get("/reportes/corte_dia")
+def corte_del_dia(db: Session = Depends(get_db)):
+    # 1. Obtener la fecha de hoy
+    hoy = date.today()
+    
+    # 2. Buscar movimientos de SALIDA de HOY
+    # 🔧 CORRECCIÓN: Cambiamos .fecha por .fecha_movimiento
+    movimientos = db.query(models.Movimiento).filter(
+        func.date(models.Movimiento.fecha_movimiento) == hoy,
+        models.Movimiento.tipo_movimiento == "SALIDA"
+    ).all()
+    
+    total_dinero = 0
+    total_items = 0
+    desglose = []
+
+    # 3. Calcular totales
+    for mov in movimientos:
+        prod = db.query(models.Producto).filter(models.Producto.id == mov.producto_id).first()
+        if prod:
+            venta = mov.cantidad * prod.precio_venta
+            total_dinero += venta
+            total_items += mov.cantidad
+            
+            desglose.append({
+                "producto": prod.nombre,
+                "cantidad": mov.cantidad,
+                "subtotal": venta,
+                # 🔧 CORRECCIÓN AQUÍ TAMBIÉN:
+                "hora": mov.fecha_movimiento.strftime("%H:%M") 
+            })
+            
+    return {
+        "fecha": hoy.strftime("%d/%m/%Y"),
+        "total_vendido": total_dinero,
+        "items_vendidos": total_items,
+        "transacciones": len(movimientos),
+        "detalle": desglose
+    }
+
+
+# --- BORRAR MOVIMIENTOS ANTIGUOS ---
+# --- BORRAR MOVIMIENTOS (PROTEGIDO CON CLAVE) ---
+@app.delete("/movimientos/limpiar")
+def limpiar_historial(
+    fecha_limite: str, 
+    clave_admin: str, # <--- 🔒 Nuevo requisito: La llave maestra
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user)
+):
+    # 1. DEFINIR LA CLAVE MAESTRA
+    # En un sistema real esto iría en variables de entorno o base de datos.
+    # Por ahora, la definimos aquí (cámbiala por la que tú quieras).
+    CLAVE_SEGURIDAD = "admin2026" 
+
+    # 2. VALIDAR LA CLAVE
+    if clave_admin != CLAVE_SEGURIDAD:
+        raise HTTPException(status_code=403, detail="⛔ Clave de seguridad incorrecta. Acceso denegado.")
+
+    # 3. SI LA CLAVE ES CORRECTA, PROCEDEMOS
+    fecha_dt = datetime.strptime(fecha_limite, "%Y-%m-%d")
+    
+    registros_borrados = db.query(models.Movimiento).filter(
+        models.Movimiento.fecha_movimiento < fecha_dt
+    ).delete()
+    
+    db.commit()
+    return {"mensaje": f"✅ Autorización exitosa. Se eliminaron {registros_borrados} movimientos antiguos."}

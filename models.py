@@ -75,3 +75,15 @@ class Usuario(Base):
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     rol = Column(String, default="empleado")
+
+
+# --- NUEVA TABLA: CONFIGURACIÓN DE LA TIENDA ---
+class Configuracion(Base):
+    __tablename__ = "configuracion"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre_tienda = Column(String, default="Mi Tienda")
+    direccion = Column(String, default="Calle Falsa 123")
+    telefono = Column(String, default="555-0000")
+    mensaje_ticket = Column(String, default="¡Gracias por su compra!")
+    moneda = Column(String, default="MXN")
