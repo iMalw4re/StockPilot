@@ -164,26 +164,37 @@ def leer_productos(db: Session = Depends(get_db), current_user: models.Usuario =
 
 @app.post("/movimientos/")
 def registrar_movimiento(movimiento: MovimientoCreate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_user)):
+    # 1. Buscar producto
     producto = db.query(models.Producto).filter(models.Producto.id == movimiento.producto_id).first()
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 
+    # 2. Verificar Stock si es salida
     if movimiento.tipo_movimiento == "SALIDA":
         if producto.stock_actual < movimiento.cantidad:
             raise HTTPException(status_code=400, detail="Stock insuficiente")
     
+    # 3. --- ¡AQUÍ ESTÁ LA MAGIA QUE FALTABA! ---
+    # Actualizamos el stock manualmente en Python
+    if movimiento.tipo_movimiento == "ENTRADA":
+        producto.stock_actual += movimiento.cantidad
+    elif movimiento.tipo_movimiento == "SALIDA":
+        producto.stock_actual -= movimiento.cantidad
+
+    # 4. Registrar el movimiento
     nuevo_movimiento = models.Movimiento(
         producto_id=movimiento.producto_id,
         tipo_movimiento=movimiento.tipo_movimiento,
         cantidad=movimiento.cantidad,
-        usuario_responsable=movimiento.usuario_responsable
+        usuario_responsable=movimiento.usuario_responsable,
+        fecha_movimiento=datetime.now() # Aseguramos fecha
     )
     
     try:
         db.add(nuevo_movimiento)
-        db.commit() # Trigger actualiza stock
+        db.commit() 
         db.refresh(nuevo_movimiento)
-        db.refresh(producto) 
+        db.refresh(producto) # Recargamos para ver el stock nuevo
         return {"mensaje": "Movimiento exitoso", "nuevo_stock": producto.stock_actual}
     except Exception as e:
         db.rollback()
@@ -261,7 +272,7 @@ def eliminar_producto(producto_id: int, db: Session = Depends(get_db), current_u
 
 @app.post("/ventas/checkout")
 def procesar_venta(venta: VentaCreate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_user)):
-    # 1. Validar Stock Total
+    # 1. Validar Stock Total primero
     for item in venta.items:
         producto = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
         if not producto:
@@ -269,10 +280,16 @@ def procesar_venta(venta: VentaCreate, db: Session = Depends(get_db), current_us
         if producto.stock_actual < item.cantidad:
             raise HTTPException(status_code=400, detail=f"Stock insuficiente para {producto.nombre}")
 
-    # 2. Registrar movimientos
+    # 2. Registrar movimientos Y DESCONTAR STOCK
     try:
         total_items = 0
         for item in venta.items:
+            # Buscamos el producto otra vez para actualizarlo
+            producto = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
+            
+            # --- ¡ESTO ES LO QUE FALTABA! ---
+            producto.stock_actual -= item.cantidad # Restamos del inventario
+            
             nuevo_movimiento = models.Movimiento(
                 producto_id=item.producto_id,
                 tipo_movimiento="SALIDA",
@@ -283,8 +300,9 @@ def procesar_venta(venta: VentaCreate, db: Session = Depends(get_db), current_us
             db.add(nuevo_movimiento)
             total_items += 1
             
-        db.commit()
+        db.commit() # Guardamos cambios en movimientos Y en productos
         return {"mensaje": "Venta exitosa", "items_procesados": total_items}
+        
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
