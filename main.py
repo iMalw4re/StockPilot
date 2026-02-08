@@ -1,6 +1,7 @@
 # ==========================================
 # ✈️ STOCKPILOT - MAIN BACKEND (COMPATIBLE CON MODELO AVANZADO)
 # ==========================================
+from fastapi.staticfiles import StaticFiles # 👈 Agrega esto para servir archivos estáticos (como tu HTML y JS)
 #librerias de seguridad y autenticacion 
 #En programación, eso se llama JWT (JSON Web Token). Vamos a crear una ruta que reciba usuario y contraseña, y si son correctos, devuelva ese Token.
 from datetime import datetime, timedelta, date
@@ -9,6 +10,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from fastapi import FastAPI, Depends, HTTPException # Manejo de excepciones
 from fastapi.middleware.cors import CORSMiddleware  # Para permitir CORS
+from fastapi.staticfiles import StaticFiles # Para servir archivos estáticos (HTML, JS)
 from sqlalchemy.orm import Session, joinedload  # Para manejar sesiones de la base de datos
 from sqlalchemy import func # Función especial de SQL llamada func que nos permite hacer sumas matemáticas
 from pydantic import BaseModel # Para validar datos que entran (Schemas)
@@ -58,6 +60,10 @@ def verify_password(plain_password, hashed_password):
 
 # 2. INICIALIZAR LA APP (UNA SOLA VEZ)
 app = FastAPI() 
+
+# --- SERVIR ARCHIVOS ESTÁTICOS (HTML, CSS, JS) ---
+# Esto hace que cuando entres a la página web, Python te muestre tus archivos
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 # --- 2. CONFIGURACIÓN DE SEGURIDAD (CORS) ---
 # Esto permite que tu HTML local se conecte con tu Python
