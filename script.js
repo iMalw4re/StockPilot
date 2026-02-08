@@ -110,9 +110,11 @@ function formatearFecha(fechaString) {
 
 // 1. Cargar Dashboard (Finanzas)
 // 1. Cargar Dashboard (Finanzas)
+// 1. Cargar Dashboard (Finanzas) - VERSIÓN CORREGIDA
 async function cargarFinanzas() {
     const token = localStorage.getItem("stockpilot_token");
-    
+    if (!token) return; // Si no hay token, no intentamos nada (Evita error 401 extra)
+
     try {
         const respuesta = await fetch(`${API_URL}/reportes/valor-inventario`, {
             method: "GET",
@@ -122,25 +124,23 @@ async function cargarFinanzas() {
         });
 
         if (!respuesta.ok) {
-             if (respuesta.status === 401) { return; }
+             if (respuesta.status === 401) return; // Si falló la auth, salimos silenciosamente
         }
 
         const datos = await respuesta.json();
 
-        // --- CORRECCIÓN AQUÍ 👇 ---
-
-        // 1. Valor del Inventario (Verificamos que exista antes de llenarlo)
-        const elementoValor = document.getElementById('valorTotal');
-        if (elementoValor) {
-            elementoValor.innerText = `$${datos.valor_total_almacen.toLocaleString()}`;
+        // --- AQUÍ ESTÁ LA CORRECCIÓN DE LOS IDs ---
+        
+        // ID: valorTotal (Coincide con tu HTML)
+        const elValor = document.getElementById('valorTotal');
+        if (elValor) {
+            elValor.innerText = `$${datos.valor_total_almacen.toLocaleString()}`;
         }
 
-        // 2. Total de Productos (AQUÍ ESTABA EL ERROR DE NOMBRADO)
-        // En tu HTML es "total-productos", aquí lo llamabas "totalProductos"
-        const elementoTotal = document.getElementById('total-productos'); // 👈 ¡Ojo al guion!
-        if (elementoTotal) {
-            // Si el dato viene vacío o null, ponemos un 0
-            elementoTotal.innerText = datos.items_contabilizados || 0;
+        // ID: total-productos (TU HTML TIENE UN GUION, AQUÍ LO PONEMOS IGUAL)
+        const elTotal = document.getElementById('total-productos'); 
+        if (elTotal) {
+            elTotal.innerText = datos.items_contabilizados || 0;
         }
 
     } catch (error) {
@@ -1254,6 +1254,3 @@ async function verCorteCaja() {
     }
 }
 
-// Ejecutar al inicio
-cargarFinanzas();
-cargarProductos();
