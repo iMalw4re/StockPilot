@@ -1,9 +1,10 @@
 // --- CONFIGURACIÓN ---
-// ✅ MODO LOCAL (Activo)
-// http://localhost:5500
-//API_URL = "http://127.0.0.1:8000";
 
-// ❌ MODO NUBE (Comentado con //)
+// ❌ MODO LOCAL (Debe estar comentado con //)
+// API_URL = "http://127.0.0.1:8000";
+
+// ✅ MODO NUBE (Esta es la que debe estar activa)
+// Usa TU enlace de Render (el que sale en la barra de tu celular)
 API_URL = "https://stockpilotapp-zhl3.onrender.com";
 let inventarioGlobal = [];
 
