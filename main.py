@@ -1,5 +1,5 @@
 # ==========================================
-# ✈️ STOCKPILOT - MAIN BACKEND (VERSIÓN FINAL NUBE)
+# ✈️ STOCKPILOT - MAIN BACKEND (VERSIÓN FINAL CON USUARIOS)
 # ==========================================
 
 from datetime import datetime, timedelta, date
@@ -8,8 +8,8 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles # Para servir archivos estáticos (HTML, JS)
-from fastapi.responses import FileResponse, StreamingResponse # Para servir archivos y PDFs
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func 
 from pydantic import BaseModel
@@ -121,7 +121,7 @@ class MovimientoCreate(BaseModel):
 class UsuarioCreate(BaseModel):
     username: str
     password: str
-    rol: str = "vendedor" # Por defecto será vendedor
+    rol: str = "vendedor" # Nuevo campo rol
 
 class ItemVenta(BaseModel):
     producto_id: int
@@ -175,8 +175,7 @@ def registrar_movimiento(movimiento: MovimientoCreate, db: Session = Depends(get
         if producto.stock_actual < movimiento.cantidad:
             raise HTTPException(status_code=400, detail="Stock insuficiente")
     
-    # 3. --- ¡AQUÍ ESTÁ LA MAGIA QUE FALTABA! ---
-    # Actualizamos el stock manualmente en Python
+    # 3. Actualizamos el stock manualmente
     if movimiento.tipo_movimiento == "ENTRADA":
         producto.stock_actual += movimiento.cantidad
     elif movimiento.tipo_movimiento == "SALIDA":
@@ -188,14 +187,14 @@ def registrar_movimiento(movimiento: MovimientoCreate, db: Session = Depends(get
         tipo_movimiento=movimiento.tipo_movimiento,
         cantidad=movimiento.cantidad,
         usuario_responsable=movimiento.usuario_responsable,
-        fecha_movimiento=datetime.now() # Aseguramos fecha
+        fecha_movimiento=datetime.now()
     )
     
     try:
         db.add(nuevo_movimiento)
         db.commit() 
         db.refresh(nuevo_movimiento)
-        db.refresh(producto) # Recargamos para ver el stock nuevo
+        db.refresh(producto) 
         return {"mensaje": "Movimiento exitoso", "nuevo_stock": producto.stock_actual}
     except Exception as e:
         db.rollback()
@@ -215,6 +214,7 @@ def obtener_movimientos(fecha_inicio: str = None, fecha_fin: str = None, db: Ses
 
     return query.order_by(models.Movimiento.fecha_movimiento.desc()).all()
 
+# --- RUTAS DE GESTIÓN DE USUARIOS ---
 @app.post("/registrar/")
 def registrar_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
     if db.query(models.Usuario).filter(models.Usuario.username == usuario.username).first():
@@ -222,37 +222,15 @@ def registrar_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
     
     hashed_password = get_password_hash(usuario.password)
     
+    # Usamos getattr por si el modelo no se ha actualizado, ponemos 'vendedor' por defecto
     nuevo_usuario = models.Usuario(
         username=usuario.username,
         hashed_password=hashed_password,
-        rol=usuario.rol # 👈 Aquí guardamos el rol que mandes (admin o vendedor)
+        rol=usuario.rol
     )
     db.add(nuevo_usuario)
     db.commit()
-    return {"mensaje": f"Usuario {nuevo_usuario.username} ({nuevo_usuario.rol}) creado correctamente"}
-
-# Busca esta función y cámbiala por esta versión mejorada:
-@app.post("/token")
-def login_para_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(models.Usuario).filter(models.Usuario.username == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=401,
-            detail="Usuario o contraseña incorrectos",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    access_token = create_access_token(data={"sub": user.username})
-    
-    # 👇 ESTO ES LO NUEVO: Devolvemos también el rol y el usuario
-    return {
-        "access_token": access_token, 
-        "token_type": "bearer", 
-        "rol": user.rol, 
-        "username": user.username
-    }
-
-# --- GESTIÓN DE USUARIOS ---
+    return {"mensaje": f"Usuario {nuevo_usuario.username} creado correctamente"}
 
 @app.get("/usuarios/")
 def listar_usuarios(db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_user)):
@@ -273,6 +251,29 @@ def eliminar_usuario(user_id: int, db: Session = Depends(get_db), current_user: 
     db.delete(usuario_a_borrar)
     db.commit()
     return {"mensaje": "Usuario eliminado"}
+
+# --- LOGIN MODIFICADO PARA DEVOLVER ROL ---
+@app.post("/token")
+def login_para_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(models.Usuario).filter(models.Usuario.username == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Usuario o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token = create_access_token(data={"sub": user.username})
+    
+    # Devolvemos el Rol para que el Frontend sepa qué mostrar
+    rol_usuario = getattr(user, "rol", "vendedor") # Si no tiene rol, es vendedor
+    
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "rol": rol_usuario,
+        "username": user.username
+    }
 
 @app.get("/reportes/valor-inventario")
 def obtener_valor_inventario(db: Session = Depends(get_db)):
@@ -309,7 +310,7 @@ def eliminar_producto(producto_id: int, db: Session = Depends(get_db), current_u
 
 @app.post("/ventas/checkout")
 def procesar_venta(venta: VentaCreate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_user)):
-    # 1. Validar Stock Total primero
+    # 1. Validar Stock Total
     for item in venta.items:
         producto = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
         if not producto:
@@ -317,15 +318,12 @@ def procesar_venta(venta: VentaCreate, db: Session = Depends(get_db), current_us
         if producto.stock_actual < item.cantidad:
             raise HTTPException(status_code=400, detail=f"Stock insuficiente para {producto.nombre}")
 
-    # 2. Registrar movimientos Y DESCONTAR STOCK
+    # 2. Registrar movimientos y descontar stock
     try:
         total_items = 0
         for item in venta.items:
-            # Buscamos el producto otra vez para actualizarlo
             producto = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
-            
-            # --- ¡ESTO ES LO QUE FALTABA! ---
-            producto.stock_actual -= item.cantidad # Restamos del inventario
+            producto.stock_actual -= item.cantidad # Resta manual
             
             nuevo_movimiento = models.Movimiento(
                 producto_id=item.producto_id,
@@ -337,9 +335,8 @@ def procesar_venta(venta: VentaCreate, db: Session = Depends(get_db), current_us
             db.add(nuevo_movimiento)
             total_items += 1
             
-        db.commit() # Guardamos cambios en movimientos Y en productos
+        db.commit()
         return {"mensaje": "Venta exitosa", "items_procesados": total_items}
-        
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
@@ -485,7 +482,6 @@ def corte_del_dia(db: Session = Depends(get_db)):
     hoy = date.today()
     manana = hoy + timedelta(days=1) # Truco para filtrar rangos
 
-    # Usamos rangos (>= hoy y < mañana) en lugar de func.date() para compatibilidad
     movimientos = db.query(models.Movimiento).filter(
         models.Movimiento.fecha_movimiento >= hoy,
         models.Movimiento.fecha_movimiento < manana,
