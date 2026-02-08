@@ -37,10 +37,14 @@ async function iniciarSesion(event) {
             
             // 1. Guardar el Token en la memoria del navegador (LocalStorage)
             localStorage.setItem("stockpilot_token", data.access_token);
+            localStorage.setItem("stockpilot_rol", data.rol);
             
             // 2. Ocultar Login y Mostrar App
             document.getElementById("seccion-login").style.display = "none";
             document.getElementById("app-principal").style.display = "flex"; // O block, según tu css
+
+            // Verificar permisos
+            verificarPermisosAdmin();
             
             // 3. Cargar datos
             cargarFinanzas();
@@ -67,6 +71,7 @@ window.onload = function() {
         // Ya tiene llave, pásale
         document.getElementById("seccion-login").style.display = "none";
         document.getElementById("app-principal").style.display = "flex";
+        verificarPermisosAdmin(); // 👈 Verificar permisos al recargar
         cargarFinanzas();
         cargarProductos();
     } else {
@@ -90,6 +95,22 @@ function cerrarSesion() {
     // 4. (Opcional) Limpiar los campos del formulario para que no se queden escritos
     document.getElementById("login_user").value = "";
     document.getElementById("login_pass").value = "";
+}
+
+function verificarPermisosAdmin() {
+    const rol = localStorage.getItem("stockpilot_rol");
+    const btnUsuarios = document.getElementById("btn-usuarios");
+    const btnDepurar = document.querySelector("button[onclick='depurarHistorial()']"); // Botón rojo de historial
+
+    if (rol === "admin") {
+        // Si es admin, mostramos todo
+        if(btnUsuarios) btnUsuarios.style.display = "block";
+        if(btnDepurar) btnDepurar.style.display = "block";
+    } else {
+        // Si es vendedor, ocultamos cosas peligrosas
+        if(btnUsuarios) btnUsuarios.style.display = "none";
+        if(btnDepurar) btnDepurar.style.display = "none";
+    }
 }
 
 // Función para formatear fechas de forma legible
@@ -382,13 +403,14 @@ async function guardarMovimiento(event) {
 
 // --- NAVEGACIÓN (CAMBIAR PESTAÑAS) ---
 function mostrarSeccion(seccion) {
-    // 1. Ocultar TODAS las secciones (¡Aquí estaba el error, faltaba agregar inventario!)
+    // 1. Ocultar TODAS las secciones
     const secciones = [
         "seccion-dashboard", 
         "seccion-historial", 
         "seccion-caja", 
         "seccion-configuracion", 
-        "seccion-inventario" // 👈 ¡ESTE ES EL IMPORTANTE!
+        "seccion-inventario", 
+        "seccion-usuarios" // ✅ Agregado correctamente
     ];
     
     // Apagamos todas las secciones
@@ -402,32 +424,33 @@ function mostrarSeccion(seccion) {
     // 2. Quitamos la clase 'active' del menú lateral
     document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
 
-    // 3. Mostramos la elegida
+    // 3. Mostramos la elegida (CADENA DE IF - ELSE IF)
     if (seccion === 'dashboard') {
         document.getElementById("seccion-dashboard").style.display = "block";
-        // Aquí podrías poner lógica para resaltar el botón del menú
-        cargarProductos(); // Recargamos datos por si acaso
+        cargarProductos(); 
+
     } else if (seccion === 'historial') {
         document.getElementById("seccion-historial").style.display = "block";
-        cargarHistorial(); // Vamos a buscar los datos a Python
-    }else if (seccion === 'caja') {
-        // --- NUEVO: Lógica para la Caja ---
+        cargarHistorial(); 
+
+    } else if (seccion === 'caja') {
         document.getElementById("seccion-caja").style.display = "block";
-        cargarProductosPOS(); // 👇 Esta función la crearemos ahora
-    }else if (seccion === 'configuracion') {
-    document.getElementById("seccion-configuracion").style.display = "block";
-    cargarConfiguracion(); // <--- Llamamos a la función para traer los datos
-    }else if (seccion === 'inventario') { 
-        // <--- 2. LÓGICA NUEVA PARA EL BOTÓN DE INVENTARIO
+        cargarProductosPOS(); 
+
+    } else if (seccion === 'configuracion') {
+        document.getElementById("seccion-configuracion").style.display = "block";
+        cargarConfiguracion(); 
+
+    } else if (seccion === 'inventario') { 
         const divInv = document.getElementById("seccion-inventario");
-        if(divInv) {
-            divInv.style.display = "block";
-        } else {
-            console.error("Falta crear el <div id='seccion-inventario'> en el HTML");
-        }
+        if(divInv) divInv.style.display = "block";
+
+    } else if (seccion === 'usuarios') { 
+        // 👇 AQUÍ ENCAJA MEJOR
+        document.getElementById("seccion-usuarios").style.display = "block";
+        cargarUsuarios(); // Llamamos a la función que trae la lista
     }
 }
-
 // --- CARGAR DATOS DEL HISTORIAL (CORREGIDO) ---
 // --- CARGAR HISTORIAL (AHORA CON FILTROS) ---
 async function cargarHistorial() {
@@ -1254,3 +1277,83 @@ async function verCorteCaja() {
     }
 }
 
+// --- GESTIÓN DE USUARIOS ---
+
+async function cargarUsuarios() {
+    const token = localStorage.getItem("stockpilot_token");
+    try {
+        const res = await fetch(`${API_URL}/usuarios/`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if(res.ok) {
+            const usuarios = await res.json();
+            const tabla = document.getElementById("tablaUsuarios");
+            tabla.innerHTML = "";
+            usuarios.forEach(u => {
+                const badgeColor = u.rol === 'admin' ? '#805ad5' : '#38a169'; // Morado admin, Verde vendedor
+                tabla.innerHTML += `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td><strong>${u.username}</strong></td>
+                        <td><span style="background:${badgeColor}; color:white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">${u.rol}</span></td>
+                        <td>
+                            ${u.username !== 'admin' ? 
+                            `<button class="btn-icon" style="background:#e53e3e; color:white;" onclick="eliminarUsuario(${u.id})"><i class="fas fa-trash"></i></button>` 
+                            : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function registrarUsuario(e) {
+    e.preventDefault();
+    const token = localStorage.getItem("stockpilot_token");
+    
+    const datos = {
+        username: document.getElementById("new_user").value,
+        password: document.getElementById("new_pass").value,
+        rol: document.getElementById("new_rol").value
+    };
+
+    try {
+        const res = await fetch(`${API_URL}/registrar/`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(datos)
+        });
+
+        if(res.ok) {
+            Swal.fire("Creado", "Usuario registrado exitosamente", "success");
+            document.getElementById("new_user").value = "";
+            document.getElementById("new_pass").value = "";
+            cargarUsuarios();
+        } else {
+            const err = await res.json();
+            Swal.fire("Error", err.detail, "error");
+        }
+    } catch (error) {
+        Swal.fire("Error", "Fallo de conexión", "error");
+    }
+}
+
+async function eliminarUsuario(id) {
+    if(!confirm("¿Eliminar este usuario?")) return;
+    
+    const token = localStorage.getItem("stockpilot_token");
+    const res = await fetch(`${API_URL}/usuarios/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    
+    if(res.ok) {
+        cargarUsuarios();
+    } else {
+        alert("No se pudo eliminar");
+    }
+}

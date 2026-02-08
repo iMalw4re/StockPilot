@@ -121,6 +121,7 @@ class MovimientoCreate(BaseModel):
 class UsuarioCreate(BaseModel):
     username: str
     password: str
+    rol: str = "vendedor" # Por defecto será vendedor
 
 class ItemVenta(BaseModel):
     producto_id: int
@@ -220,11 +221,17 @@ def registrar_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="El usuario ya existe")
     
     hashed_password = get_password_hash(usuario.password)
-    nuevo_usuario = models.Usuario(username=usuario.username, hashed_password=hashed_password, rol="admin")
+    
+    nuevo_usuario = models.Usuario(
+        username=usuario.username,
+        hashed_password=hashed_password,
+        rol=usuario.rol # 👈 Aquí guardamos el rol que mandes (admin o vendedor)
+    )
     db.add(nuevo_usuario)
     db.commit()
-    return {"mensaje": f"Usuario {nuevo_usuario.username} creado correctamente"}
+    return {"mensaje": f"Usuario {nuevo_usuario.username} ({nuevo_usuario.rol}) creado correctamente"}
 
+# Busca esta función y cámbiala por esta versión mejorada:
 @app.post("/token")
 def login_para_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(models.Usuario).filter(models.Usuario.username == form_data.username).first()
@@ -234,8 +241,38 @@ def login_para_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db
             detail="Usuario o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
     access_token = create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    
+    # 👇 ESTO ES LO NUEVO: Devolvemos también el rol y el usuario
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "rol": user.rol, 
+        "username": user.username
+    }
+
+# --- GESTIÓN DE USUARIOS ---
+
+@app.get("/usuarios/")
+def listar_usuarios(db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_user)):
+    # Solo los admins pueden ver la lista
+    if current_user.rol != "admin":
+        raise HTTPException(status_code=403, detail="No tienes permisos de administrador")
+    return db.query(models.Usuario).all()
+
+@app.delete("/usuarios/{user_id}")
+def eliminar_usuario(user_id: int, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_user)):
+    if current_user.rol != "admin":
+        raise HTTPException(status_code=403, detail="No tienes permisos")
+    
+    usuario_a_borrar = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
+    if not usuario_a_borrar:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+    db.delete(usuario_a_borrar)
+    db.commit()
+    return {"mensaje": "Usuario eliminado"}
 
 @app.get("/reportes/valor-inventario")
 def obtener_valor_inventario(db: Session = Depends(get_db)):
