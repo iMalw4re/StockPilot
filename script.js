@@ -109,27 +109,44 @@ function formatearFecha(fechaString) {
 }
 
 // 1. Cargar Dashboard (Finanzas)
+// 1. Cargar Dashboard (Finanzas)
 async function cargarFinanzas() {
-    const token = localStorage.getItem("stockpilot_token"); // 👈 Recuperar Token
+    const token = localStorage.getItem("stockpilot_token");
+    
     try {
         const respuesta = await fetch(`${API_URL}/reportes/valor-inventario`, {
             method: "GET",
             headers: {
-                "Authorization": `Bearer ${token}` // 👈 ¡ESTO FALTABA!
+                "Authorization": `Bearer ${token}`
             }
         });
 
         if (!respuesta.ok) {
-             if (respuesta.status === 401) { return; } // Si falla auth, no hacemos nada visual aqui
+             if (respuesta.status === 401) { return; }
         }
+
         const datos = await respuesta.json();
-        document.getElementById('valorTotal').innerText = `$${datos.valor_total_almacen.toLocaleString()}`; // .toLocaleString pone las comas de miles
-        document.getElementById('totalProductos').innerText = datos.items_contabilizados || 0;
+
+        // --- CORRECCIÓN AQUÍ 👇 ---
+
+        // 1. Valor del Inventario (Verificamos que exista antes de llenarlo)
+        const elementoValor = document.getElementById('valorTotal');
+        if (elementoValor) {
+            elementoValor.innerText = `$${datos.valor_total_almacen.toLocaleString()}`;
+        }
+
+        // 2. Total de Productos (AQUÍ ESTABA EL ERROR DE NOMBRADO)
+        // En tu HTML es "total-productos", aquí lo llamabas "totalProductos"
+        const elementoTotal = document.getElementById('total-productos'); // 👈 ¡Ojo al guion!
+        if (elementoTotal) {
+            // Si el dato viene vacío o null, ponemos un 0
+            elementoTotal.innerText = datos.items_contabilizados || 0;
+        }
+
     } catch (error) {
         console.error("Error cargando finanzas:", error);
     }
 }
-
 // 2. Cargar Tabla de Productos
 // 2. Cargar Tabla de Productos (CON BOTONES NUEVOS)
 async function cargarProductos() {
