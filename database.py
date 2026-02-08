@@ -8,9 +8,12 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 
 # 2. Si no existe (porque estás en tu compu), usamos la local
+    # CAMBIA ESTO POR TUS DATOS DE NEON TECH 👇
+    # Pega aquí el enlace largo. RECUERDA: Que empiece con 'postgresql://' (con ql)
+    # 2. Si no existe (porque estás en tu compu), usamos la local
 if not SQLALCHEMY_DATABASE_URL:
-    # CAMBIA ESTO POR TUS DATOS LOCALES (Como lo tenías antes)
-    SQLALCHEMY_DATABASE_URL = "postgresql://postgres:mcr181122@localhost/Logistica"
+    # ✅ ASÍ DEBE QUEDAR (Sin 'psql', entre comillas y asignado a la variable):
+    SQLALCHEMY_DATABASE_URL = "postgresql://neondb_owner:npg_wDjB5lvA2nsa@ep-holy-queen-aigdnl43-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require"
 else:
     # Corrección para Render (a veces da la url con postgres:// y SQLAlchemy pide postgresql://)
     if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):

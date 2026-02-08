@@ -1,10 +1,10 @@
 // --- CONFIGURACIÓN ---
 // ✅ MODO LOCAL (Activo)
 // http://localhost:5500
-// API_URL = "http://127.0.0.1:8000";
+API_URL = "http://127.0.0.1:8000";
 
 // ❌ MODO NUBE (Comentado con //)
-API_URL = "https://stockpilot-lhep.onrender.com";
+//API_URL = "https://stockpilot-lhep.onrender.com";
 let inventarioGlobal = [];
 
 
