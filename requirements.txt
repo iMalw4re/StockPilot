@@ -9,3 +9,4 @@ pandas
 openpyxl
 reportlab
 requests
+python-multipart
