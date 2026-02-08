@@ -730,6 +730,7 @@ async function guardarEdicion(event) {
 // --- LÓGICA DE GRÁFICAS (Chart.js) ---
 
 let chartValor = null; // Variables globales para poder destruir y redibujar
+let chartStock = null;
 
 function renderizarGraficos(productos) {
     // 1. Preparar los datos
@@ -1201,38 +1202,6 @@ async function descargarExcel() {
         alert("Error de conexión");
     } finally {
         document.body.style.cursor = "default"; // Quitar relojito
-    }
-}
-
-
-// --- CORTE DE CAJA ---
-async function verCorteCaja() {
-    const token = localStorage.getItem("stockpilot_token");
-
-    try {
-        const respuesta = await fetch(`${API_URL}/reportes/corte_dia`, {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (respuesta.ok) {
-            const datos = await respuesta.json();
-            
-            // Llenar el modal con los datos
-            document.getElementById("corteFecha").innerText = datos.fecha;
-            document.getElementById("corteTotal").innerText = `$${datos.total_vendido.toLocaleString()}`;
-            document.getElementById("corteItems").innerText = datos.items_vendidos;
-            document.getElementById("corteTransacciones").innerText = datos.transacciones;
-            
-            // Mostrar modal
-            document.getElementById("modalCorte").style.display = "block";
-        } else {
-            alert("Error al obtener el corte");
-        }
-
-    } catch (error) {
-        console.error(error);
-        alert("Error de conexión");
     }
 }
 
