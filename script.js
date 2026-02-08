@@ -1357,3 +1357,32 @@ async function eliminarUsuario(id) {
         alert("No se pudo eliminar");
     }
 }
+
+// --- FUNCIÓN DE REGISTRO RÁPIDO (SOLO PARA EMERGENCIAS O PRIMER USO) ---
+async function crearAdminRapido() {
+    const usuario = prompt("Elige un nombre de usuario:");
+    if (!usuario) return;
+    const pass = prompt("Elige una contraseña:");
+    if (!pass) return;
+
+    try {
+        const respuesta = await fetch(`${API_URL}/registrar/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                username: usuario,
+                password: pass,
+                rol: "admin" // Forzamos que sea Admin porque es el primero
+            })
+        });
+
+        if (respuesta.ok) {
+            alert("✅ Usuario creado con éxito. Ahora inicia sesión.");
+        } else {
+            const error = await respuesta.json();
+            alert("❌ Error: " + error.detail);
+        }
+    } catch (error) {
+        alert("Error de conexión");
+    }
+}

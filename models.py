@@ -76,7 +76,6 @@ class Usuario(Base):
     hashed_password = Column(String)
     rol = Column(String, default="vendedor")
 
-
 # --- NUEVA TABLA: CONFIGURACIÓN DE LA TIENDA ---
 class Configuracion(Base):
     __tablename__ = "configuracion"
