@@ -543,6 +543,32 @@ def limpiar_historial(fecha_limite: str, clave_admin: str, db: Session = Depends
     db.commit()
     return {"mensaje": f"✅ Se eliminaron {registros_borrados} movimientos antiguos."}
 
+# --- 🚨 RESCATE DE EMERGENCIA: CREAR ADMIN AUTOMÁTICO 🚨 ---
+@app.get("/crear_admin_urgente")
+def crear_admin_urgente(db: Session = Depends(get_db)):
+    # 1. Definimos los datos MANUALMENTE (Aquí no hay error posible)
+    nombre = "admin"
+    pass_texto = "123"
+    
+    # 2. Borramos si ya existe (para evitar duplicados)
+    existente = db.query(models.Usuario).filter(models.Usuario.username == nombre).first()
+    if existente:
+        db.delete(existente)
+        db.commit()
+    
+    # 3. Lo creamos de nuevo, limpio y perfecto
+    hashed_password = get_password_hash(pass_texto)
+    nuevo_usuario = models.Usuario(
+        username=nombre,
+        hashed_password=hashed_password,
+        rol="admin"
+    )
+    
+    db.add(nuevo_usuario)
+    db.commit()
+    
+    return {"mensaje": "✅ LISTO: Usuario 'admin' con contraseña '123' creado forzosamente."}
+    
 # --- ZONA DE ARCHIVOS ESTÁTICOS ---
 @app.get("/")
 async def read_index():
