@@ -98,17 +98,27 @@ function cerrarSesion() {
 }
 
 function verificarPermisosAdmin() {
+    // 1. Preguntamos: "¿Quién eres?"
     const rol = localStorage.getItem("stockpilot_rol");
-    const btnUsuarios = document.getElementById("btn-usuarios");
-    const btnDepurar = document.querySelector("button[onclick='depurarHistorial()']"); // Botón rojo de historial
 
+    // 2. Buscamos los botones que queremos controlar
+    const btnUsuarios = document.getElementById("btn-usuarios"); // (Ojo: revisa que este ID coincida con tu HTML)
+    const btnConfig = document.getElementById("link-config");     // 👈 ESTE ES EL NUEVO
+    const btnDepurar = document.querySelector("button[onclick='depurarHistorial()']"); 
+
+    // 3. Tomamos decisiones
     if (rol === "admin") {
-        // Si es admin, mostramos todo
-        if(btnUsuarios) btnUsuarios.style.display = "block";
+        // --- SI ES EL JEFE (ADMIN) ---
+        // Le mostramos TODO
+        if(btnUsuarios) btnUsuarios.style.display = "block"; // O "flex" si usas flexbox
+        if(btnConfig) btnConfig.style.display = "block";     // 👈 MOSTRAR CONFIG
         if(btnDepurar) btnDepurar.style.display = "block";
+        
     } else {
-        // Si es vendedor, ocultamos cosas peligrosas
+        // --- SI ES EMPLEADO (VENDEDOR) ---
+        // Le escondemos lo peligroso
         if(btnUsuarios) btnUsuarios.style.display = "none";
+        if(btnConfig) btnConfig.style.display = "none";      // 👈 OCULTAR CONFIG
         if(btnDepurar) btnDepurar.style.display = "none";
     }
 }

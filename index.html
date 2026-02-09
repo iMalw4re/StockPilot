@@ -58,11 +58,12 @@
                     <li onclick="mostrarSeccion('caja')">
                         <a href="#"><i class="fas fa-cash-register"></i> Punto de Venta</a>
                     </li>
-                    <li onclick="mostrarSeccion('configuracion')">
-                        <a href="#"><i class="fas fa-cog"></i> Configuración</a>
+                    <li id="link-config" onclick="mostrarSeccion('configuracion')">
+                        <i class="fas fa-cog"></i> Configuración
                     </li>
-                    <li onclick="mostrarSeccion('usuarios')" id="btn-usuarios" style="display: none;">
-                        <a href="#"><i class="fas fa-users-cog"></i> Usuarios</a>
+
+                    <li id="link-usuarios" onclick="mostrarSeccion('usuarios')">
+                        <i class="fas fa-users"></i> Usuarios
                     </li>
                     <li onclick="cerrarSesion()" style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                         <a href="#" style="color: #fc8181;">
