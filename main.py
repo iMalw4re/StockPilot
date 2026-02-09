@@ -549,52 +549,35 @@ def limpiar_historial(fecha_limite: str, clave_admin: str, db: Session = Depends
     return {"mensaje": f"✅ Se eliminaron {registros_borrados} movimientos antiguos."}
 
 # --- 🚨 RESCATE DE EMERGENCIA: CREAR ADMIN AUTOMÁTICO 🚨 ---
+# --- SÚPER RUTA DE EMERGENCIA (RESET + ADMIN) ---
 @app.get("/crear_admin_urgente")
 def crear_admin_urgente(db: Session = Depends(get_db)):
-    # 1. Definimos los datos MANUALMENTE (Aquí no hay error posible)
-    nombre = "admin"
-    pass_texto = "123"
+    """
+    1. Borra la base de datos vieja (Reset).
+    2. Crea las tablas nuevas (con precio_compra).
+    3. Crea al usuario Admin.
+    """
+    # 1. EL RESETEO (Operación Destructiva)
+    import models
+    from database import engine
     
-    # 2. Borramos si ya existe (para evitar duplicados)
-    existente = db.query(models.Usuario).filter(models.Usuario.username == nombre).first()
-    if existente:
-        db.delete(existente)
+    # Borramos todo y recreamos tablas
+    models.Base.metadata.drop_all(bind=engine)
+    models.Base.metadata.create_all(bind=engine)
+    
+    # 2. CREAR EL ADMIN (Operación Constructiva)
+    # Verificamos si ya existe (aunque acabamos de borrar, es buena práctica)
+    existing_user = db.query(models.Usuario).filter(models.Usuario.username == "admin").first()
+    if not existing_user:
+        hashed_password = auth.get_password_hash("admin123") # O la contraseña que uses
+        nuevo_admin = models.Usuario(
+            username="admin",
+            hashed_password=hashed_password,
+            rol="admin"
+        )
+        db.add(nuevo_admin)
         db.commit()
+        db.refresh(nuevo_admin)
+        return {"mensaje": "✅ ¡EXITO TOTAL! Base de datos reseteada, tablas nuevas creadas y Admin restaurado. Ya puedes iniciar sesión."}
     
-    # 3. Lo creamos de nuevo, limpio y perfecto
-    hashed_password = get_password_hash(pass_texto)
-    nuevo_usuario = models.Usuario(
-        username=nombre,
-        hashed_password=hashed_password,
-        rol="admin"
-    )
-    
-    db.add(nuevo_usuario)
-    db.commit()
-    
-    return {"mensaje": "✅ LISTO: Usuario 'admin' con contraseña '123' creado forzosamente."}
-
-# --- ZONA DE ARCHIVOS ESTÁTICOS ---
-@app.get("/")
-async def read_index():
-    return FileResponse("index.html")
-
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
-
-# --- 🧨 ZONA DE PELIGRO: RUTAS DE MANTENIMIENTO 🧨 ---
-
-@app.get("/reset_database_urgente")
-def reset_database():
-    """
-    ¡ADVERTENCIA! Esta ruta BORRA TODA LA BASE DE DATOS y la crea de nuevo.
-    Úsala solo cuando cambies la estructura de las tablas (como ahora).
-    """
-    from database import engine, Base
-    
-    # 1. Borrar todo (Drop All)
-    Base.metadata.drop_all(bind=engine)
-    
-    # 2. Crear todo nuevo (Create All)
-    Base.metadata.create_all(bind=engine)
-    
-    return {"mensaje": "✅ Base de datos reseteada. Tablas nuevas creadas (precio_compra, stock_actual, etc). ¡Ahora crea tu admin!"}
+    return {"mensaje": "El admin ya existe (esto no debería pasar si se borró la BD)."}
