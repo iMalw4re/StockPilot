@@ -1282,20 +1282,25 @@ async function verCorteCaja() {
 async function cargarUsuarios() {
     const token = localStorage.getItem("stockpilot_token");
     try {
+        // Pedimos la lista al backend
         const res = await fetch(`${API_URL}/usuarios/`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
+        
         if(res.ok) {
             const usuarios = await res.json();
             const tabla = document.getElementById("tablaUsuarios");
             tabla.innerHTML = "";
+            
             usuarios.forEach(u => {
-                const badgeColor = u.rol === 'admin' ? '#805ad5' : '#38a169'; // Morado admin, Verde vendedor
+                // Coloreamos la etiqueta según el rol
+                const color = u.rol === 'admin' ? '#805ad5' : '#38a169'; 
+                
                 tabla.innerHTML += `
                     <tr>
                         <td>${u.id}</td>
                         <td><strong>${u.username}</strong></td>
-                        <td><span style="background:${badgeColor}; color:white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">${u.rol}</span></td>
+                        <td><span style="background:${color}; color:white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">${u.rol}</span></td>
                         <td>
                             ${u.username !== 'admin' ? 
                             `<button class="btn-icon" style="background:#e53e3e; color:white;" onclick="eliminarUsuario(${u.id})"><i class="fas fa-trash"></i></button>` 
@@ -1312,6 +1317,7 @@ async function registrarUsuario(e) {
     e.preventDefault();
     const token = localStorage.getItem("stockpilot_token");
     
+    // Tomamos los datos del formulario
     const datos = {
         username: document.getElementById("new_user").value,
         password: document.getElementById("new_pass").value,
@@ -1329,21 +1335,21 @@ async function registrarUsuario(e) {
         });
 
         if(res.ok) {
-            Swal.fire("Creado", "Usuario registrado exitosamente", "success");
+            alert("✅ Usuario creado exitosamente");
             document.getElementById("new_user").value = "";
             document.getElementById("new_pass").value = "";
-            cargarUsuarios();
+            cargarUsuarios(); // Recargamos la tabla
         } else {
             const err = await res.json();
-            Swal.fire("Error", err.detail, "error");
+            alert("❌ Error: " + err.detail);
         }
     } catch (error) {
-        Swal.fire("Error", "Fallo de conexión", "error");
+        alert("Error de conexión");
     }
 }
 
 async function eliminarUsuario(id) {
-    if(!confirm("¿Eliminar este usuario?")) return;
+    if(!confirm("¿Estás seguro de eliminar a este usuario?")) return;
     
     const token = localStorage.getItem("stockpilot_token");
     const res = await fetch(`${API_URL}/usuarios/${id}`, {
@@ -1355,34 +1361,5 @@ async function eliminarUsuario(id) {
         cargarUsuarios();
     } else {
         alert("No se pudo eliminar");
-    }
-}
-
-// --- FUNCIÓN DE REGISTRO RÁPIDO (SOLO PARA EMERGENCIAS O PRIMER USO) ---
-async function crearAdminRapido() {
-    const usuario = prompt("Elige un nombre de usuario:");
-    if (!usuario) return;
-    const pass = prompt("Elige una contraseña:");
-    if (!pass) return;
-
-    try {
-        const respuesta = await fetch(`${API_URL}/registrar/`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                username: usuario,
-                password: pass,
-                rol: "admin" // Forzamos que sea Admin porque es el primero
-            })
-        });
-
-        if (respuesta.ok) {
-            alert("✅ Usuario creado con éxito. Ahora inicia sesión.");
-        } else {
-            const error = await respuesta.json();
-            alert("❌ Error: " + error.detail);
-        }
-    } catch (error) {
-        alert("Error de conexión");
     }
 }
