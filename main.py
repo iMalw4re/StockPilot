@@ -2,7 +2,7 @@
 # ✈️ STOCKPILOT - MAIN BACKEND (GOLDEN VERSION)
 # ==========================================
 
-# --- 1. IMPORTS COMPLETOS (SIN DUPLICADOS) ---
+# --- 1. IMPORTS COMPLETOS (SIN DUPLICADOS) -----
 from datetime import datetime, timedelta, date
 from typing import List, Optional
 from io import BytesIO
