@@ -214,23 +214,40 @@ def obtener_movimientos(fecha_inicio: str = None, fecha_fin: str = None, db: Ses
 
     return query.order_by(models.Movimiento.fecha_movimiento.desc()).all()
 
-# --- RUTAS DE GESTIÓN DE USUARIOS ---
+# --- VERSIÓN DE DIAGNÓSTICO PARA ENCONTRAR EL ERROR ---
 @app.post("/registrar/")
 def registrar_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
-    if db.query(models.Usuario).filter(models.Usuario.username == usuario.username).first():
-        raise HTTPException(status_code=400, detail="El usuario ya existe")
-    
-    hashed_password = get_password_hash(usuario.password)
-    
-    # Usamos getattr por si el modelo no se ha actualizado, ponemos 'vendedor' por defecto
-    nuevo_usuario = models.Usuario(
-        username=usuario.username,
-        hashed_password=hashed_password,
-        rol=usuario.rol
-    )
-    db.add(nuevo_usuario)
-    db.commit()
-    return {"mensaje": f"Usuario {nuevo_usuario.username} creado correctamente"}
+    try:
+        # 1. Verificar si ya existe
+        existe = db.query(models.Usuario).filter(models.Usuario.username == usuario.username).first()
+        if existe:
+            raise HTTPException(status_code=400, detail="El usuario ya existe")
+        
+        # 2. Intentar hashear la contraseña (AQUÍ SUELE FALLAR)
+        print(f"Intentando hashear password para {usuario.username}...")
+        hashed_password = get_password_hash(usuario.password)
+        
+        # 3. Intentar crear el modelo (AQUÍ FALLA SI LA BD NO TIENE ROL)
+        print("Creando objeto usuario...")
+        nuevo_usuario = models.Usuario(
+            username=usuario.username,
+            hashed_password=hashed_password,
+            rol=usuario.rol
+        )
+        
+        # 4. Intentar guardar en BD
+        print("Guardando en base de datos...")
+        db.add(nuevo_usuario)
+        db.commit()
+        db.refresh(nuevo_usuario)
+        
+        return {"mensaje": f" ÉXITO: Usuario {nuevo_usuario.username} creado."}
+
+    except Exception as e:
+        # SI ALGO FALLA, IMPRIMIMOS EL ERROR REAL
+        print(f"❌ ERROR GRAVE: {str(e)}")
+        # Y lo devolvemos al frontend para que lo veas en la alerta
+        raise HTTPException(status_code=500, detail=f"Fallo el servidor: {str(e)}")
 
 @app.get("/usuarios/")
 def listar_usuarios(db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_user)):
