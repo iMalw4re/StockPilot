@@ -110,7 +110,7 @@ class ProductoCreate(ProductoBase):
 class ProductoResponse(ProductoBase):
     id: int
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # Movimientos
 class MovimientoCreate(BaseModel):
