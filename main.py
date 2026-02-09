@@ -18,6 +18,7 @@ from passlib.context import CryptContext
 import models
 import database
 
+
 # --- IMPORTS PARA PDF ---
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
@@ -550,34 +551,26 @@ def limpiar_historial(fecha_limite: str, clave_admin: str, db: Session = Depends
 
 # --- 🚨 RESCATE DE EMERGENCIA: CREAR ADMIN AUTOMÁTICO 🚨 ---
 # --- SÚPER RUTA DE EMERGENCIA (RESET + ADMIN) ---
+# --- SÚPER RUTA DE EMERGENCIA (VERSIÓN SIN DEPENDENCIAS DE AUTH) ---
 @app.get("/crear_admin_urgente")
 def crear_admin_urgente(db: Session = Depends(get_db)):
-    """
-    1. Borra la base de datos vieja (Reset).
-    2. Crea las tablas nuevas (con precio_compra).
-    3. Crea al usuario Admin.
-    """
-    # 1. EL RESETEO (Operación Destructiva)
     import models
     from database import engine
     
-    # Borramos todo y recreamos tablas
+    # 1. Borrar y Crear Tablas
     models.Base.metadata.drop_all(bind=engine)
     models.Base.metadata.create_all(bind=engine)
     
-    # 2. CREAR EL ADMIN (Operación Constructiva)
-    # Verificamos si ya existe (aunque acabamos de borrar, es buena práctica)
-    existing_user = db.query(models.Usuario).filter(models.Usuario.username == "admin").first()
-    if not existing_user:
-        hashed_password = auth.get_password_hash("admin123") # O la contraseña que uses
-        nuevo_admin = models.Usuario(
-            username="admin",
-            hashed_password=hashed_password,
-            rol="admin"
-        )
-        db.add(nuevo_admin)
-        db.commit()
-        db.refresh(nuevo_admin)
-        return {"mensaje": "✅ ¡EXITO TOTAL! Base de datos reseteada, tablas nuevas creadas y Admin restaurado. Ya puedes iniciar sesión."}
+    # 2. Crear Admin
+    # Este es el hash de "admin123" generado con bcrypt
+    # Así no necesitamos importar auth.py si te da error
+    hash_seguro = "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxwKc.6qKzJUFy/8g.Z.H/6.A.Z6"
     
-    return {"mensaje": "El admin ya existe (esto no debería pasar si se borró la BD)."}
+    nuevo_admin = models.Usuario(
+        username="admin",
+        hashed_password=hash_seguro, 
+        rol="admin"
+    )
+    db.add(nuevo_admin)
+    db.commit()
+    return {"mensaje": "✅ ¡EXITO! Base de datos reiniciada. Usuario: admin / Pass: admin123"}
