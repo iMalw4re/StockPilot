@@ -580,3 +580,21 @@ async def read_index():
     return FileResponse("index.html")
 
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
+
+# --- 🧨 ZONA DE PELIGRO: RUTAS DE MANTENIMIENTO 🧨 ---
+
+@app.get("/reset_database_urgente")
+def reset_database():
+    """
+    ¡ADVERTENCIA! Esta ruta BORRA TODA LA BASE DE DATOS y la crea de nuevo.
+    Úsala solo cuando cambies la estructura de las tablas (como ahora).
+    """
+    from database import engine, Base
+    
+    # 1. Borrar todo (Drop All)
+    Base.metadata.drop_all(bind=engine)
+    
+    # 2. Crear todo nuevo (Create All)
+    Base.metadata.create_all(bind=engine)
+    
+    return {"mensaje": "✅ Base de datos reseteada. Tablas nuevas creadas (precio_compra, stock_actual, etc). ¡Ahora crea tu admin!"}
