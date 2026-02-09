@@ -551,26 +551,42 @@ def limpiar_historial(fecha_limite: str, clave_admin: str, db: Session = Depends
 
 # --- 🚨 RESCATE DE EMERGENCIA: CREAR ADMIN AUTOMÁTICO 🚨 ---
 # --- SÚPER RUTA DE EMERGENCIA (RESET + ADMIN) ---
-# --- SÚPER RUTA DE EMERGENCIA (VERSIÓN SIN DEPENDENCIAS DE AUTH) ---
+# ==========================================
+# 🚨 RUTA DE EMERGENCIA (COPIAR Y PEGAR) 🚨
+# ==========================================
 @app.get("/crear_admin_urgente")
-def crear_admin_urgente(db: Session = Depends(get_db)):
+def crear_admin_urgente():
+    """
+    Ruta de rescate: Borra DB, Crea Tablas, Crea Admin.
+    Usuario: admin
+    Pass: admin123
+    """
+    # 1. Importaciones dentro de la función para evitar errores globales
+    from database import engine, SessionLocal
     import models
-    from database import engine
     
-    # 1. Borrar y Crear Tablas
-    models.Base.metadata.drop_all(bind=engine)
-    models.Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
     
-    # 2. Crear Admin
-    # Este es el hash de "admin123" generado con bcrypt
-    # Así no necesitamos importar auth.py si te da error
-    hash_seguro = "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxwKc.6qKzJUFy/8g.Z.H/6.A.Z6"
-    
-    nuevo_admin = models.Usuario(
-        username="admin",
-        hashed_password=hash_seguro, 
-        rol="admin"
-    )
-    db.add(nuevo_admin)
-    db.commit()
-    return {"mensaje": "✅ ¡EXITO! Base de datos reiniciada. Usuario: admin / Pass: admin123"}
+    try:
+        # 2. RESET TOTAL (Borrar y Crear Tablas)
+        models.Base.metadata.drop_all(bind=engine)
+        models.Base.metadata.create_all(bind=engine)
+        
+        # 3. CREAR ADMIN (Con contraseña 'admin123' ya encriptada)
+        # Este hash es: $2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxwKc.6qKzJUFy/8g.Z.H/6.A.Z6
+        pass_segura = "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxwKc.6qKzJUFy/8g.Z.H/6.A.Z6"
+        
+        nuevo_admin = models.Usuario(
+            username="admin",
+            hashed_password=pass_segura,
+            rol="admin"
+        )
+        db.add(nuevo_admin)
+        db.commit()
+        
+        return {"mensaje": "✅ SISTEMA REINICIADO. Usuario: admin | Pass: admin123"}
+        
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        db.close()
