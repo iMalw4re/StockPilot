@@ -403,28 +403,28 @@ async function guardarMovimiento(event) {
 
 // --- NAVEGACIÓN (CAMBIAR PESTAÑAS) ---
 function mostrarSeccion(seccion) {
-    // 1. Ocultar TODAS las secciones
+    // 1. Lista de todos los IDs de las secciones
     const secciones = [
         "seccion-dashboard", 
         "seccion-historial", 
         "seccion-caja", 
         "seccion-configuracion", 
-        "seccion-inventario", 
+        "seccion-inventario",
         "seccion-usuarios" // ✅ Agregado correctamente
     ];
     
-    // Apagamos todas las secciones
+    // 2. Primero OCULTAMOS TODAS (Reseteo)
     secciones.forEach(id => {
         const elemento = document.getElementById(id);
         if (elemento) {
             elemento.style.display = "none";
         }
     });
-    
-    // 2. Quitamos la clase 'active' del menú lateral
+
+    // 3. Quitamos la clase 'active' del menú lateral (Visual)
     document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
 
-    // 3. Mostramos la elegida (CADENA DE IF - ELSE IF)
+    // 4. Mostramos SOLO la elegida (Lógica de encendido)
     if (seccion === 'dashboard') {
         document.getElementById("seccion-dashboard").style.display = "block";
         cargarProductos(); 
@@ -446,9 +446,10 @@ function mostrarSeccion(seccion) {
         if(divInv) divInv.style.display = "block";
 
     } else if (seccion === 'usuarios') { 
-        // 👇 AQUÍ ENCAJA MEJOR
-        document.getElementById("seccion-usuarios").style.display = "block";
-        cargarUsuarios(); // Llamamos a la función que trae la lista
+        // 👇 AQUÍ ES DONDE DEBE IR (AL FINAL DE LA CADENA)
+        const divUsuarios = document.getElementById("seccion-usuarios");
+        if (divUsuarios) divUsuarios.style.display = "block";
+        cargarUsuarios(); // ✅ Llamamos a la base de datos
     }
 }
 // --- CARGAR DATOS DEL HISTORIAL (CORREGIDO) ---
