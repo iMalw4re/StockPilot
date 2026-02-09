@@ -354,3 +354,8 @@ def crear_admin_urgente():
         return {"error": str(e)}
     finally:
         db.close()
+
+
+# --- SERVIR ARCHIVOS ESTÁTICOS (TU PÁGINA WEB) ---
+# Esta línea es la que conecta el index.html con internet
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
