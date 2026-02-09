@@ -45,35 +45,35 @@
                     <h2>StockPilot</h2>
                     <img src="logo_malware.png" alt="StockPilot Logo">
                 </div>
-                <ul>
-                    <li class="active" onclick="mostrarSeccion('dashboard')">
-                        <i class="fas fa-home"></i> Panel de Control
-                    </li>
-                    
-                    <li onclick="mostrarSeccion('inventario')">
-                        <i class="fas fa-box"></i> Inventario
-                    </li>
-                    
-                    <li onclick="mostrarSeccion('historial')">
-                        <i class="fas fa-history"></i> Movimientos
-                    </li>
-                    
-                    <li onclick="mostrarSeccion('caja')">
-                        <i class="fas fa-cash-register"></i> Punto de Venta
-                    </li>
+                <li onclick="mostrarSeccion('dashboard')" class="active">
+                    <a href="#"><i class="fas fa-home"></i> Panel de Control</a>
+                </li>
 
-                    <li id="btn-config" onclick="mostrarSeccion('configuracion')">
-                        <i class="fas fa-cog"></i> Configuración
-                    </li>
+                <li onclick="mostrarSeccion('inventario')">
+                    <a href="#"><i class="fas fa-box"></i> Inventario</a>
+                </li>
 
-                    <li id="btn-usuarios" onclick="mostrarSeccion('usuarios')">
-                        <i class="fas fa-users"></i> Usuarios
-                    </li>
-                    
-                    <li style="margin-top: auto; color: #ff6b6b;" onclick="cerrarSesion()">
+                <li onclick="mostrarSeccion('historial')">
+                    <a href="#"><i class="fas fa-history"></i> Movimientos</a>
+                </li>
+
+                <li onclick="mostrarSeccion('caja')">
+                    <a href="#"><i class="fas fa-cash-register"></i> Punto de Venta</a>
+                </li>
+
+                <li id="link-config" onclick="mostrarSeccion('configuracion')">
+                    <a href="#"><i class="fas fa-cog"></i> Configuración</a>
+                </li>
+
+                <li id="link-usuarios" onclick="mostrarSeccion('usuarios')">
+                    <a href="#"><i class="fas fa-users"></i> Usuarios</a>
+                </li>
+
+                <li onclick="cerrarSesion()" style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="#" style="color: #fc8181;">
                         <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                    </li>
-                </ul>
+                    </a>
+                </li>
             </nav>
 <main class="main-content">
     <div id="seccion-dashboard">

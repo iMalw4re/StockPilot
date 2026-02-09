@@ -100,18 +100,18 @@ function cerrarSesion() {
 function verificarPermisosAdmin() {
     const rol = localStorage.getItem("stockpilot_rol");
     
-    // 1. Buscamos los botones por su ID nuevo y limpio
-    const botonConfig = document.getElementById("btn-config");
-    const botonUsuarios = document.getElementById("btn-usuarios");
+    // Buscamos por los IDs que pusimos en el HTML restaurado
+    const botonConfig = document.getElementById("link-config");
+    const botonUsuarios = document.getElementById("link-usuarios");
     const botonDepurar = document.querySelector("button[onclick='depurarHistorial()']");
 
     if (rol === "admin") {
-        // --- ADMIN: VE TODO ---
-        if (botonConfig) botonConfig.style.display = "flex"; // Usamos flex para que no se vea chueco
-        if (botonUsuarios) botonUsuarios.style.display = "flex";
+        // SI ES ADMIN: Mostramos (display: block para que respete el estilo original)
+        if (botonConfig) botonConfig.style.display = "block";
+        if (botonUsuarios) botonUsuarios.style.display = "block";
         if (botonDepurar) botonDepurar.style.display = "block";
     } else {
-        // --- CAJERO: SE LE OCULTA LO IMPORTANTE ---
+        // SI ES CAJERO: Ocultamos
         if (botonConfig) botonConfig.style.display = "none";
         if (botonUsuarios) botonUsuarios.style.display = "none";
         if (botonDepurar) botonDepurar.style.display = "none";
