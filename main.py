@@ -93,36 +93,40 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         
     return user
 
-# --- SCHEMAS ---
+# --- 1. SCHEMAS DE PRODUCTOS (El Corazón del Sistema) ---
 class ProductoBase(BaseModel):
     sku: str
     nombre: str
-    precio_compra: float
-    precio_venta: float
-    stock_actual: int
-    punto_reorden: int
-    proveedor_default_id: Optional[int] = None 
     descripcion: Optional[str] = None
+    precio_compra: float   # 💰 Vital para Finanzas
+    precio_venta: float    # 💰 Vital para Ventas
+    stock_actual: int      # 📦 Tu inventario real
+    punto_reorden: int = 5
+    proveedor_default_id: Optional[int] = None
 
 class ProductoCreate(ProductoBase):
-    pass
+    pass  # Hereda todo lo de arriba (sku, precios, stock, etc.)
 
 class ProductoResponse(ProductoBase):
     id: int
     class Config:
-        from_attributes = True
+        from_attributes = True  # Para que lea datos de SQLAlchemy
 
+# --- 2. SCHEMAS DE MOVIMIENTOS ---
 class MovimientoCreate(BaseModel):
-    producto_id: int
-    tipo_movimiento: str
+    sku: str  # Usamos SKU para identificar
+    tipo_movimiento: str # "entrada" o "salida"
     cantidad: int
     usuario_responsable: str
+    notas: Optional[str] = None
 
+# --- 3. SCHEMAS DE USUARIOS ---
 class UsuarioCreate(BaseModel):
     username: str
     password: str
-    rol: str = "vendedor" # Nuevo campo rol
+    rol: str = "vendedor" 
 
+# --- 4. SCHEMAS DE VENTAS (Caja) ---
 class ItemVenta(BaseModel):
     producto_id: int
     cantidad: int
@@ -131,6 +135,7 @@ class VentaCreate(BaseModel):
     items: List[ItemVenta]
     usuario_responsable: str
 
+# --- 5. SCHEMAS DE CONFIGURACIÓN ---
 class ConfiguracionUpdate(BaseModel):
     nombre_tienda: str
     direccion: str

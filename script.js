@@ -177,72 +177,96 @@ async function cargarFinanzas() {
     }
 }
 // 2. Cargar Tabla de Productos
-// 2. Cargar Tabla de Productos (CON BOTONES NUEVOS)
+// 2. Cargar Tabla de Productos (VERSIÓN PRO FUSIONADA)
 async function cargarProductos() {
-    // 1. Recuperamos la llave del bolsillo
     const token = localStorage.getItem("stockpilot_token");
+    const tabla = document.getElementById("tablaProductos");
+    
+    // Elementos del Dashboard (Tarjetas)
+    const elTotalProd = document.getElementById("total-productos");
+    const elTotalDinero = document.getElementById("total-dinero"); 
+    const elValorTotalHeader = document.getElementById("valorTotal"); // Por si tienes el otro header también
 
     try {
         const respuesta = await fetch(`${API_URL}/productos/`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}` // 👈 ¡ESTO ES LA LLAVE!
+                "Authorization": `Bearer ${token}`
             }
         });
 
-        // (El resto de tu código sigue igual...)
         if (!respuesta.ok) {
-             if (respuesta.status === 401) { cerrarSesion(); return; } // Si la llave venció, nos saca
+             if (respuesta.status === 401) { cerrarSesion(); return; }
              throw new Error("Error al cargar");
         }
         
         const productos = await respuesta.json();
-        inventarioGlobal = productos; // Guardamos en variable global para usar en el escáner
+        window.inventarioGlobal = productos; // Guardamos para el escáner
 
-        const contadorCard = document.getElementById('total-productos');
-        if (contadorCard) {
-            contadorCard.innerText = productos.length; // Pone la cantidad real (ej. 15)
-        }
-        renderizarGraficos(productos); // Llamamos a la función para graficar
-        
-        const cuerpoTabla = document.getElementById('tablaProductos');
-        cuerpoTabla.innerHTML = ""; // Limpiar tabla
+        // --- 💰 CÁLCULOS FINANCIEROS (LO NUEVO) ---
+        let sumaStock = 0;
+        let sumaDinero = 0;
 
-        productos.forEach(prod => {
-            let estado = '<span class="ok">Stock</span>';
-            if (prod.stock_actual <= prod.punto_reorden) {
-                estado = '<span class="alerta">REORDENAR</span>';
-            }
-
-            const fila = `
-                <tr>
-                    <td><strong>${prod.sku}</strong></td>
-                    <td>${prod.nombre}</td>
-                    <td>${prod.stock_actual}</td>
-                    <td>${estado}</td>
-                    <td>$${prod.precio_venta.toLocaleString()}</td>
-                    <td>
-                        <button class="btn-icon btn-vender" onclick="abrirModalMovimiento(${prod.id}, '${prod.sku}', 'salida')" title="Vender">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <button class="btn-icon btn-comprar" onclick="abrirModalMovimiento(${prod.id}, '${prod.sku}', 'entrada')" title="Reabastecer">
-                            <i class="fas fa-plus"></i>
-                        </button>
-
-                        <span style="margin: 0 5px; border-left: 1px solid #ccc;"></span>
-
-                        <button class="btn-icon" style="background-color: #f6ad55; color: white;" onclick="abrirModalEditar(${prod.id})" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon" style="background-color: #fc8181; color: white;" onclick="eliminarProducto(${prod.id})" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-            cuerpoTabla.innerHTML += fila;
+        productos.forEach(p => {
+            sumaStock += p.stock_actual;
+            // Calculamos valor de venta total
+            sumaDinero += (p.stock_actual * p.precio_venta);
         });
+
+        // Actualizamos Tarjetas del Dashboard
+        if (elTotalProd) elTotalProd.innerText = sumaStock; // Suma real de items
+        
+        // Formateamos el dinero bonito ($1,500.00)
+        const dineroFormateado = "$" + sumaDinero.toLocaleString('es-MX', {minimumFractionDigits: 2});
+        if (elTotalDinero) elTotalDinero.innerText = dineroFormateado;
+        if (elValorTotalHeader) elValorTotalHeader.innerText = dineroFormateado;
+
+        // --- 📊 GRÁFICOS (TU LÓGICA) ---
+        if(typeof renderizarGraficos === 'function') {
+            renderizarGraficos(productos); 
+        }
+        
+        // --- 📝 TABLA (TUS BOTONES) ---
+        if (tabla) {
+            tabla.innerHTML = ""; // Limpiar tabla
+
+            productos.forEach(prod => {
+                let estado = '<span class="ok" style="color:green; font-weight:bold;">Stock OK</span>';
+                if (prod.stock_actual <= prod.punto_reorden) {
+                    estado = `<span class="alerta" style="color:red; font-weight:bold;">⚠️ BAJO (${prod.punto_reorden})</span>`;
+                }
+
+                const fila = `
+                    <tr>
+                        <td><strong>${prod.sku}</strong></td>
+                        <td>${prod.nombre}</td>
+                        <td>${prod.stock_actual}</td>
+                        <td>${estado}</td>
+                        <td>$${prod.precio_venta.toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+                        <td>
+                            <button class="btn-icon btn-vender" onclick="abrirModalMovimiento(${prod.id}, '${prod.sku}', 'salida')" title="Vender (-)">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button class="btn-icon btn-comprar" onclick="abrirModalMovimiento(${prod.id}, '${prod.sku}', 'entrada')" title="Reabastecer (+)">
+                                <i class="fas fa-plus"></i>
+                            </button>
+
+                            <span style="margin: 0 5px; border-left: 1px solid #ccc;"></span>
+
+                            <button class="btn-icon" style="background-color: #f6ad55; color: white;" onclick="abrirModalEditar(${prod.id})" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon" style="background-color: #fc8181; color: white;" onclick="eliminarProducto(${prod.id})" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tabla.innerHTML += fila;
+            });
+        }
+
     } catch (error) {
         console.error("Error cargando productos:", error);
     }
@@ -556,7 +580,7 @@ async function depurarHistorial() {
 
     // 2. SEGUNDA VENTANA: Pedir Contraseña
     const { value: clave } = await Swal.fire({
-        title: '🔒 SEGURIDAD REQUERIDA',
+        title: 'SEGURIDAD REQUERIDA',
         text: `Estás a punto de borrar registros anteriores al ${fechaLimite}. Confirma tu identidad.`,
         input: 'password',
         inputPlaceholder: 'Escribe la clave de administrador',
@@ -1377,7 +1401,7 @@ async function eliminarUsuario(id) {
     }
 }
 
-// --- MÓDULO DE FINANZAS ---
+// --- MÓDULO DE FINANZAS (VERSIÓN PRO: GANANCIAS Y MÁRGENES) ---
 async function cargarFinanzas() {
     const token = localStorage.getItem("stockpilot_token");
     try {
@@ -1388,46 +1412,79 @@ async function cargarFinanzas() {
         if (res.ok) {
             const productos = await res.json();
             
-            let capitalTotal = 0;
+            let capitalVenta = 0;  // Valor si vendes todo (Ingreso Potencial)
+            let capitalCosto = 0;  // Lo que te costó comprarlo (Costo de Ventas)
             let totalItems = 0;
             
-            // 1. Calculamos el Capital Total (Sigma Precio * Cantidad)
             productos.forEach(p => {
-                capitalTotal += (p.precio * p.cantidad);
-                totalItems += p.cantidad;
+                // 1. Usamos los nombres NUEVOS de tu Base de Datos
+                const stock = p.stock_actual; 
+                const venta = p.precio_venta;
+                const compra = p.precio_compra;
+
+                capitalVenta += (venta * stock);
+                capitalCosto += (compra * stock);
+                totalItems += stock;
             });
 
-            // 2. Llenamos las Tarjetas KPIs
-            document.getElementById("fin-capital-total").textContent = capitalTotal.toLocaleString('es-MX', {minimumFractionDigits: 2});
+            // 2. Llenar Tarjetas KPIs (Indicadores Clave)
+            // Tarjeta Azul: Valor de Mercado (Activo Realizable)
+            document.getElementById("fin-capital-total").textContent = capitalVenta.toLocaleString('es-MX', {minimumFractionDigits: 2});
+            
+            // Tarjeta Roja: Cantidad de piezas
             document.getElementById("fin-items").textContent = totalItems;
             
-            // Precio Promedio Ponderado simple
-            const promedio = totalItems > 0 ? (capitalTotal / totalItems) : 0;
-            document.getElementById("fin-promedio").textContent = promedio.toLocaleString('es-MX', {minimumFractionDigits: 2});
+            // Tarjeta Amarilla: MARGEN DE GANANCIA GLOBAL
+            // (Utilidad Bruta / Ventas Totales)
+            const utilidadGlobal = capitalVenta - capitalCosto;
+            const margenGlobal = capitalVenta > 0 ? (utilidadGlobal / capitalVenta) * 100 : 0;
+            
+            const elPromedio = document.getElementById("fin-promedio");
+            // Cambiamos el contenido de la tarjeta del medio para mostrar el Margen
+            elPromedio.innerHTML = `
+                <span style="color: ${margenGlobal >= 30 ? '#48bb78' : '#e53e3e'}; font-weight: bold;">
+                    ${margenGlobal.toFixed(1)}%
+                </span>
+                <br><small style="color: gray; font-size: 0.6em;">Margen de Utilidad</small>
+            `;
 
-            // 3. ANÁLISIS DE ACTIVOS (Tabla)
-            // Ordenamos: Los que valen más dinero total van arriba
-            productos.sort((a, b) => (b.precio * b.cantidad) - (a.precio * a.cantidad));
-
+            // 3. TABLA DE ANÁLISIS (Top Productos por Utilidad)
             const tabla = document.getElementById("tablaFinanzas");
             tabla.innerHTML = "";
 
+            // Ordenamos: Los que dejan más DINERO (Utilidad) van primero
+            productos.sort((a, b) => {
+                const utilidadA = (a.precio_venta - a.precio_compra) * a.stock_actual;
+                const utilidadB = (b.precio_venta - b.precio_compra) * b.stock_actual;
+                return utilidadB - utilidadA; // Mayor a menor
+            });
+
             productos.forEach(p => {
-                const valorTotalProducto = p.precio * p.cantidad;
-                // Calculamos qué porcentaje de tu capital representa este producto
-                const porcentaje = capitalTotal > 0 ? ((valorTotalProducto / capitalTotal) * 100).toFixed(1) : 0;
+                const utilidadUnit = p.precio_venta - p.precio_compra;
+                const utilidadTotal = utilidadUnit * p.stock_actual;
+                // Margen individual
+                const margen = p.precio_venta > 0 ? (utilidadUnit / p.precio_venta) * 100 : 0;
+
+                // Color del margen (Verde si ganas > 30%, Rojo si es poco)
+                const colorMargen = margen >= 30 ? "green" : "red";
+                const bgMargen = margen >= 30 ? "#c6f6d5" : "#fed7d7";
 
                 tabla.innerHTML += `
                     <tr>
                         <td><strong>${p.nombre}</strong></td>
-                        <td>${p.cantidad}</td>
-                        <td>$${p.precio}</td>
-                        <td style="color: #2b6cb0; font-weight:bold;">$${valorTotalProducto.toLocaleString('es-MX')}</td>
+                        <td>${p.stock_actual}</td>
                         <td>
-                            <div style="background: #edf2f7; width: 100px; height: 10px; border-radius: 5px; overflow: hidden;">
-                                <div style="width: ${porcentaje}%; background: #48bb78; height: 100%;"></div>
-                            </div>
-                            <small>${porcentaje}%</small>
+                            <small style="color:gray;">Compra:</small> $${p.precio_compra}<br>
+                            <small style="color:green;">Venta:</small> <strong>$${p.precio_venta}</strong>
+                        </td>
+                        <td style="color: #2b6cb0; font-weight:bold;">
+                            $${utilidadTotal.toLocaleString('es-MX')}
+                            <br><small style="color:gray; font-weight:normal;">(Ganancia Est.)</small>
+                        </td>
+                        <td>
+                             <span style="background:${bgMargen}; color:${colorMargen}; padding:2px 6px; border-radius:4px; font-weight:bold;">
+                                ${margen.toFixed(1)}%
+                             </span>
                         </td>
                     </tr>
                 `;
