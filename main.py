@@ -6,7 +6,8 @@ from datetime import datetime, timedelta, date
 from jose import jwt, JWTError
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
-from fastapi import FastAPI, Depends, HTTPException
+# En main.py (Línea 1 o 2)
+from fastapi import FastAPI, Depends, HTTPException, status  # 👈 ¡AQUÍ ESTÁ EL CULPABLE!
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
@@ -17,6 +18,7 @@ from typing import List, Optional
 from passlib.context import CryptContext
 import models
 import database
+# En main.py (Línea 1 o 2)
 
 
 # --- IMPORTS PARA PDF ---
@@ -302,30 +304,21 @@ def eliminar_usuario(user_id: int, db: Session = Depends(get_db), current_user: 
 
 # --- LOGIN MODIFICADO PARA DEVOLVER ROL ---
 @app.post("/token")
-def login_para_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # 1. Buscar usuario
     user = db.query(models.Usuario).filter(models.Usuario.username == form_data.username).first()
+    
+    # 2. Verificar contraseña
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
-            status_code=401,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username, "rol": user.rol}, # Guardamos el Rol en el token
-        expires_delta=access_token_expires
-    )
-    
-    # Devolvemos el Rol para que el Frontend sepa qué mostrar
-    rol_usuario = getattr(user, "rol", "vendedor") # Si no tiene rol, es vendedor
-    
-    return {
-        "access_token": access_token, 
-        "token_type": "bearer", 
-        "rol": rol_usuario,
-        "username": user.username
-    }
+    # 3. Crear token
+    access_token = create_access_token(data={"sub": user.username, "rol": user.rol})
+    return {"access_token": access_token, "token_type": "bearer", "rol": user.rol}
 
 @app.get("/reportes/valor-inventario")
 def obtener_valor_inventario(db: Session = Depends(get_db)):
