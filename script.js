@@ -104,11 +104,14 @@ function verificarPermisosAdmin() {
     const botonConfig = document.getElementById("link-config");
     const botonUsuarios = document.getElementById("link-usuarios"); 
     const botonDepurar = document.querySelector("button[onclick='depurarHistorial()']");
+    const botonFinanzas = document.getElementById("link-finanzas");
 
     if (rol === "admin") {
         // ADMIN: Muestra todo
         if (botonConfig) botonConfig.style.display = "block"; // O 'list-item'
         if (botonUsuarios) botonUsuarios.style.display = "block";
+        if (botonFinanzas) botonFinanzas.style.display = "block";
+        if (botonFinanzas) botonFinanzas.style.display = "none";
         if (botonDepurar) botonDepurar.style.display = "block";
     } else {
         // CAJERO: Oculta
@@ -415,7 +418,8 @@ function mostrarSeccion(seccion) {
         "seccion-caja", 
         "seccion-configuracion", 
         "seccion-inventario",
-        "seccion-usuarios" // ✅ Agregado correctamente
+        "seccion-usuarios",
+        "seccion-finanzas" // ✅ Agregado correctamente
     ];
     
     // 2. Primero OCULTAMOS TODAS (Reseteo)
@@ -455,6 +459,9 @@ function mostrarSeccion(seccion) {
         const divUsuarios = document.getElementById("seccion-usuarios");
         if (divUsuarios) divUsuarios.style.display = "block";
         cargarUsuarios(); // ✅ Llamamos a la base de datos
+    }else if (seccion === 'finanzas') { 
+        document.getElementById("seccion-finanzas").style.display = "block";
+        cargarFinanzas(); // 👈 ¡IMPORTANTE! Llamar a la función
     }
 }
 // --- CARGAR DATOS DEL HISTORIAL (CORREGIDO) ---
@@ -1367,5 +1374,66 @@ async function eliminarUsuario(id) {
         cargarUsuarios();
     } else {
         alert("No se pudo eliminar");
+    }
+}
+
+// --- MÓDULO DE FINANZAS ---
+async function cargarFinanzas() {
+    const token = localStorage.getItem("stockpilot_token");
+    try {
+        const res = await fetch(`${API_URL}/productos/`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+            const productos = await res.json();
+            
+            let capitalTotal = 0;
+            let totalItems = 0;
+            
+            // 1. Calculamos el Capital Total (Sigma Precio * Cantidad)
+            productos.forEach(p => {
+                capitalTotal += (p.precio * p.cantidad);
+                totalItems += p.cantidad;
+            });
+
+            // 2. Llenamos las Tarjetas KPIs
+            document.getElementById("fin-capital-total").textContent = capitalTotal.toLocaleString('es-MX', {minimumFractionDigits: 2});
+            document.getElementById("fin-items").textContent = totalItems;
+            
+            // Precio Promedio Ponderado simple
+            const promedio = totalItems > 0 ? (capitalTotal / totalItems) : 0;
+            document.getElementById("fin-promedio").textContent = promedio.toLocaleString('es-MX', {minimumFractionDigits: 2});
+
+            // 3. ANÁLISIS DE ACTIVOS (Tabla)
+            // Ordenamos: Los que valen más dinero total van arriba
+            productos.sort((a, b) => (b.precio * b.cantidad) - (a.precio * a.cantidad));
+
+            const tabla = document.getElementById("tablaFinanzas");
+            tabla.innerHTML = "";
+
+            productos.forEach(p => {
+                const valorTotalProducto = p.precio * p.cantidad;
+                // Calculamos qué porcentaje de tu capital representa este producto
+                const porcentaje = capitalTotal > 0 ? ((valorTotalProducto / capitalTotal) * 100).toFixed(1) : 0;
+
+                tabla.innerHTML += `
+                    <tr>
+                        <td><strong>${p.nombre}</strong></td>
+                        <td>${p.cantidad}</td>
+                        <td>$${p.precio}</td>
+                        <td style="color: #2b6cb0; font-weight:bold;">$${valorTotalProducto.toLocaleString('es-MX')}</td>
+                        <td>
+                            <div style="background: #edf2f7; width: 100px; height: 10px; border-radius: 5px; overflow: hidden;">
+                                <div style="width: ${porcentaje}%; background: #48bb78; height: 100%;"></div>
+                            </div>
+                            <small>${porcentaje}%</small>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+    } catch (error) {
+        console.error("Error financiero:", error);
     }
 }

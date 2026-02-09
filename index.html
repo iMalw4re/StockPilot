@@ -61,6 +61,10 @@
                 <li onclick="mostrarSeccion('caja')">
                     <a href="#"><i class="fas fa-cash-register"></i> Punto de Venta</a>
                 </li>
+
+                <li id="link-finanzas" onclick="mostrarSeccion('finanzas')">
+                    <a href="#"><i class="fas fa-chart-line"></i> Finanzas</a>
+                </li>
                 
                 <li id="link-config" onclick="mostrarSeccion('configuracion')">
                     <a href="#"><i class="fas fa-cog"></i> Configuración</a>
@@ -218,10 +222,10 @@
         </div>
     </div>
     <div id="seccion-caja" style="display: none;">
-        <h2>🛒 Punto de Venta</h2>
+        <h2>Punto de Venta</h2>
         <div class="contenedor-pos">
             <div class="columna-productos">
-            <input type="text" id="buscador-pos" placeholder="🔍 Buscar producto por nombre o código..." 
+            <input type="text" id="buscador-pos" placeholder="Buscar producto por nombre o código..." 
                 style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ddd;"
                 onkeyup="filtrarProductosPOS()">
                 <table class="tabla-moderna">
@@ -256,6 +260,51 @@
                     <i class="fas fa-trash"></i> Cancelar
                 </button>
             </div>
+        </div>
+    </div>
+
+    <div id="seccion-finanzas" style="display: none;">
+        <header>
+            <h1><i class="fas fa-chart-line"></i> Ingeniería Económica</h1>
+        </header>
+
+        <div class="cards-container">
+            <div class="card" style="border-left: 5px solid #2b6cb0;">
+                <h2>$<span id="fin-capital-total">0.00</span></h2>
+                <p>Valor Total del Inventario (MXN)</p>
+                <div class="icon-bg" style="color: #2b6cb020;"><i class="fas fa-university"></i></div>
+            </div>
+
+            <div class="card" style="border-left: 5px solid #d69e2e;">
+                <h2>$<span id="fin-promedio">0.00</span></h2>
+                <p>Precio Promedio por Artículo</p>
+                <div class="icon-bg" style="color: #d69e2e20;"><i class="fas fa-tags"></i></div>
+            </div>
+
+            <div class="card" style="border-left: 5px solid #e53e3e;">
+                <h2><span id="fin-items">0</span></h2>
+                <p>Total Unidades en Bodega</p>
+                <div class="icon-bg" style="color: #e53e3e20;"><i class="fas fa-cubes"></i></div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <h3>Top Activos (Productos de Mayor Valor Acumulado)</h3>
+            <p style="color: gray; font-size: 0.9em; margin-bottom: 10px;">
+                Estos productos representan tu mayor inversión. Cuídalos.
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Stock</th>
+                        <th>Precio Unitario</th>
+                        <th>Valor Total (Activo)</th>
+                        <th>% del Capital</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaFinanzas"></tbody>
+            </table>
         </div>
     </div>
     
