@@ -302,7 +302,8 @@ async function guardarProducto(event) {
         precio_compra: parseFloat(document.getElementById("precio_compra").value),
         precio_venta: parseFloat(document.getElementById("precio_venta").value),
         stock_actual: parseInt(document.getElementById("stock_actual").value),
-        punto_reorden: parseInt(document.getElementById("punto_reorden").value)
+        punto_reorden: parseInt(document.getElementById("punto_reorden").value),
+        descripcion: "Sin descripción" // Tu HTML no tiene campo descripción, mandamos uno por defecto
     };
 
     try {
@@ -743,59 +744,56 @@ async function eliminarProducto(id) {
 
 // --- FUNCIONES DE EDICIÓN ---
 
-function abrirModalEditar(id) {
-    // 1. Buscar el producto en nuestra memoria global
-    const producto = inventarioGlobal.find(p => p.id === id);
+function abrirModalEditar(producto) {
+    // Llenamos los campos del modal de edición con los datos actuales
+    document.getElementById("edit_id").value = producto.id;
+    document.getElementById("edit_sku").value = producto.sku;
+    document.getElementById("edit_nombre").value = producto.nombre;
     
-    if (producto) {
-        // 2. Rellenar el formulario con los datos actuales
-        document.getElementById("edit_id").value = producto.id;
-        document.getElementById("edit_sku").value = producto.sku;
-        document.getElementById("edit_nombre").value = producto.nombre;
-        document.getElementById("edit_precio_compra").value = producto.precio_compra;
-        document.getElementById("edit_precio_venta").value = producto.precio_venta;
-        document.getElementById("edit_stock_actual").value = producto.stock_actual;
-        document.getElementById("edit_punto_reorden").value = producto.punto_reorden;
+    // Estos son los nuevos campos financieros
+    document.getElementById("edit_precio_compra").value = producto.precio_compra;
+    document.getElementById("edit_precio_venta").value = producto.precio_venta;
+    
+    document.getElementById("edit_stock_actual").value = producto.stock_actual;
+    document.getElementById("edit_punto_reorden").value = producto.punto_reorden;
 
-        // 3. Mostrar la ventana
-        document.getElementById("modalEditar").style.display = "block";
-    }
+    // Mostrar el modal
+    document.getElementById("modalEditar").style.display = "block";
 }
 
 async function guardarEdicion(event) {
     event.preventDefault();
     
-    const id = document.getElementById("edit_id").value;
     const token = localStorage.getItem("stockpilot_token");
+    const id = document.getElementById("edit_id").value;
 
-    const datosActualizados = {
+    const productoActualizado = {
         sku: document.getElementById("edit_sku").value,
         nombre: document.getElementById("edit_nombre").value,
         precio_compra: parseFloat(document.getElementById("edit_precio_compra").value),
         precio_venta: parseFloat(document.getElementById("edit_precio_venta").value),
         stock_actual: parseInt(document.getElementById("edit_stock_actual").value),
         punto_reorden: parseInt(document.getElementById("edit_punto_reorden").value),
-        descripcion: "Actualizado desde Web"
+        descripcion: "Actualizado"
     };
 
     try {
-        const respuesta = await fetch(`${API_URL}/productos/${id}`, {
+        const res = await fetch(`${API_URL}/productos/${id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify(datosActualizados)
+            body: JSON.stringify(productoActualizado)
         });
 
-        if (respuesta.ok) {
-            alert("Cambios guardados exitosamente");
+        if (res.ok) {
+            alert("Producto actualizado correctamente");
             document.getElementById("modalEditar").style.display = "none";
-            cargarProductos(); // Refrescar tabla
-            cargarFinanzas();
+            cargarProductos();
         } else {
-            if (respuesta.status === 401) { cerrarSesion(); return; }
-            alert("Error al actualizar");
+            const error = await res.json();
+            alert("Error al actualizar: " + error.detail);
         }
     } catch (error) {
         console.error(error);
