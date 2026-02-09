@@ -102,9 +102,9 @@ function verificarPermisosAdmin() {
     
     // Ahora sí los encontrará porque agregamos los IDs en el HTML
     const botonConfig = document.getElementById("link-config");
-    const botonUsuarios = document.getElementById("link-usuarios"); 
+    const botonUsuarios = document.getElementById("link-usuarios");
+    const btnFinanzas = document.getElementById("link-finanzas"); 
     const botonDepurar = document.querySelector("button[onclick='depurarHistorial()']");
-    const botonFinanzas = document.getElementById("link-finanzas");
 
     if (rol === "admin") {
         // ADMIN: Muestra todo
@@ -461,7 +461,7 @@ function mostrarSeccion(seccion) {
         cargarUsuarios(); // ✅ Llamamos a la base de datos
     }else if (seccion === 'finanzas') { 
         document.getElementById("seccion-finanzas").style.display = "block";
-        cargarFinanzas(); // 👈 ¡IMPORTANTE! Llamar a la función
+        cargarFinanzas();
     }
 }
 // --- CARGAR DATOS DEL HISTORIAL (CORREGIDO) ---
