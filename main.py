@@ -314,25 +314,43 @@ def guardar_config(datos: ConfiguracionUpdate, db: Session = Depends(get_db), cu
     return {"mensaje": "Guardado"}
 
 # --- 7. RUTA DE EMERGENCIA (RESET) ---
+# ==========================================
+# 🚨 RUTA DE EMERGENCIA (CORREGIDA) 🚨
+# ==========================================
 @app.get("/crear_admin_urgente")
 def crear_admin_urgente():
+    """
+    Ruta de rescate: Borra DB, Crea Tablas, Crea Admin.
+    Usuario: admin | Pass: admin123
+    """
     from database import engine, SessionLocal
     import models
+    # Importamos esto para generar la contraseña fresca
+    from passlib.context import CryptContext 
+    
     db = SessionLocal()
+    
     try:
+        # 1. RESET TOTAL
         models.Base.metadata.drop_all(bind=engine)
         models.Base.metadata.create_all(bind=engine)
         
-        # Hash de "admin123"
-        pass_segura = "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxwKc.6qKzJUFy/8g.Z.H/6.A.Z6"
-        nuevo_admin = models.Usuario(username="admin", hashed_password=pass_segura, rol="admin")
+        # 2. GENERAR CONTRASEÑA FRESCA (Aquí estaba el error antes)
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        pass_segura = pwd_context.hash("admin123") # <--- ESTO LO ARREGLA
+        
+        # 3. CREAR ADMIN
+        nuevo_admin = models.Usuario(
+            username="admin", 
+            hashed_password=pass_segura, 
+            rol="admin"
+        )
         db.add(nuevo_admin)
         db.commit()
-        return {"mensaje": "✅ SISTEMA RESETEADO. Admin restaurado."}
+        
+        return {"mensaje": "✅ SISTEMA REPARADO. Hash generado correctamente. Usuario: admin | Pass: admin123"}
+        
     except Exception as e:
         return {"error": str(e)}
     finally:
         db.close()
-
-# --- 8. ARCHIVOS ESTÁTICOS (AL FINAL) ---
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
