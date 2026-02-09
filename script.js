@@ -98,28 +98,23 @@ function cerrarSesion() {
 }
 
 function verificarPermisosAdmin() {
-    // 1. Preguntamos: "¿Quién eres?"
     const rol = localStorage.getItem("stockpilot_rol");
+    
+    // 1. Buscamos los botones por su ID nuevo y limpio
+    const botonConfig = document.getElementById("btn-config");
+    const botonUsuarios = document.getElementById("btn-usuarios");
+    const botonDepurar = document.querySelector("button[onclick='depurarHistorial()']");
 
-    // 2. Buscamos los botones que queremos controlar
-    const btnUsuarios = document.getElementById("btn-usuarios"); // (Ojo: revisa que este ID coincida con tu HTML)
-    const btnConfig = document.getElementById("link-config");     // 👈 ESTE ES EL NUEVO
-    const btnDepurar = document.querySelector("button[onclick='depurarHistorial()']"); 
-
-    // 3. Tomamos decisiones
     if (rol === "admin") {
-        // --- SI ES EL JEFE (ADMIN) ---
-        // Le mostramos TODO
-        if(btnUsuarios) btnUsuarios.style.display = "block"; // O "flex" si usas flexbox
-        if(btnConfig) btnConfig.style.display = "block";     // 👈 MOSTRAR CONFIG
-        if(btnDepurar) btnDepurar.style.display = "block";
-        
+        // --- ADMIN: VE TODO ---
+        if (botonConfig) botonConfig.style.display = "flex"; // Usamos flex para que no se vea chueco
+        if (botonUsuarios) botonUsuarios.style.display = "flex";
+        if (botonDepurar) botonDepurar.style.display = "block";
     } else {
-        // --- SI ES EMPLEADO (VENDEDOR) ---
-        // Le escondemos lo peligroso
-        if(btnUsuarios) btnUsuarios.style.display = "none";
-        if(btnConfig) btnConfig.style.display = "none";      // 👈 OCULTAR CONFIG
-        if(btnDepurar) btnDepurar.style.display = "none";
+        // --- CAJERO: SE LE OCULTA LO IMPORTANTE ---
+        if (botonConfig) botonConfig.style.display = "none";
+        if (botonUsuarios) botonUsuarios.style.display = "none";
+        if (botonDepurar) botonDepurar.style.display = "none";
     }
 }
 
