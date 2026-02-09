@@ -590,3 +590,7 @@ def crear_admin_urgente():
         return {"error": str(e)}
     finally:
         db.close()
+
+    # --- SERVIR ARCHIVOS ESTÁTICOS (TU PÁGINA WEB) ---
+# Esto hace que index.html, style.css y script.js funcionen
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
