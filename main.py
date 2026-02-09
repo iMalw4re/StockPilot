@@ -568,7 +568,7 @@ def crear_admin_urgente(db: Session = Depends(get_db)):
     db.commit()
     
     return {"mensaje": "✅ LISTO: Usuario 'admin' con contraseña '123' creado forzosamente."}
-    
+
 # --- ZONA DE ARCHIVOS ESTÁTICOS ---
 @app.get("/")
 async def read_index():
