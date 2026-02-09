@@ -56,6 +56,31 @@ def verify_password(plain_password, hashed_password):
 # 2. INICIALIZAR LA APP
 app = FastAPI() 
 
+# --- CONFIGURACIÓN DE SEGURIDAD (JWT) ---
+SECRET_KEY = "tu_secreto_super_seguro_cambialo_en_produccion"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 300
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Funciones de ayuda (Para no depender de auth.py)
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
 # --- CONFIGURACIÓN CORS ---
 origins = ["*"] 
 app.add_middleware(
@@ -286,7 +311,11 @@ def login_para_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    access_token = create_access_token(data={"sub": user.username})
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username, "rol": user.rol}, # Guardamos el Rol en el token
+        expires_delta=access_token_expires
+    )
     
     # Devolvemos el Rol para que el Frontend sepa qué mostrar
     rol_usuario = getattr(user, "rol", "vendedor") # Si no tiene rol, es vendedor
