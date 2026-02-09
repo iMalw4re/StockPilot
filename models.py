@@ -69,7 +69,7 @@ class Movimiento(Base):
 
 # --- 5. NUEVA CLASE USUARIO (LO QUE AGREGAMOS HOY) ---
 class Usuario(Base):
-    __tablename__ = "usuarios"
+    __tablename__ = "usuarios_v2"  # 👈 ¡CAMBIA ESTO! (Agrega el _v2)
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
