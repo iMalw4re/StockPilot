@@ -177,7 +177,7 @@ async function cargarFinanzas() {
     }
 }
 // 2. Cargar Tabla de Productos
-// 2. Cargar Tabla de Productos (VERSIÓN PRO FUSIONADA)
+// 2. Cargar Tabla de Productos (CON SEMÁFORO DE ALERTA 🚨)
 async function cargarProductos() {
     const token = localStorage.getItem("stockpilot_token");
     const tabla = document.getElementById("tablaProductos");
@@ -185,7 +185,7 @@ async function cargarProductos() {
     // Elementos del Dashboard (Tarjetas)
     const elTotalProd = document.getElementById("total-productos");
     const elTotalDinero = document.getElementById("total-dinero"); 
-    const elValorTotalHeader = document.getElementById("valorTotal"); // Por si tienes el otro header también
+    const elValorTotalHeader = document.getElementById("valorTotal");
 
     try {
         const respuesta = await fetch(`${API_URL}/productos/`, {
@@ -202,47 +202,59 @@ async function cargarProductos() {
         }
         
         const productos = await respuesta.json();
-        window.inventarioGlobal = productos; // Guardamos para el escáner
+        window.inventarioGlobal = productos; 
 
-        // --- 💰 CÁLCULOS FINANCIEROS (LO NUEVO) ---
+        // --- 💰 CÁLCULOS FINANCIEROS ---
         let sumaStock = 0;
         let sumaDinero = 0;
+        let contadorAlertas = 0; // Nuevo: Para contar alertas
 
         productos.forEach(p => {
             sumaStock += p.stock_actual;
-            // Calculamos valor de venta total
             sumaDinero += (p.stock_actual * p.precio_venta);
+            // Contamos si hay alerta para usarlo después si quieres
+            if (p.stock_actual <= p.punto_reorden) contadorAlertas++;
         });
 
         // Actualizamos Tarjetas del Dashboard
-        if (elTotalProd) elTotalProd.innerText = sumaStock; // Suma real de items
+        if (elTotalProd) elTotalProd.innerText = sumaStock; 
         
-        // Formateamos el dinero bonito ($1,500.00)
         const dineroFormateado = "$" + sumaDinero.toLocaleString('es-MX', {minimumFractionDigits: 2});
         if (elTotalDinero) elTotalDinero.innerText = dineroFormateado;
         if (elValorTotalHeader) elValorTotalHeader.innerText = dineroFormateado;
 
-        // --- 📊 GRÁFICOS (TU LÓGICA) ---
+        // --- 📊 GRÁFICOS ---
         if(typeof renderizarGraficos === 'function') {
             renderizarGraficos(productos); 
         }
         
-        // --- 📝 TABLA (TUS BOTONES) ---
+        // --- 📝 TABLA CON SEMÁFORO ---
         if (tabla) {
             tabla.innerHTML = ""; // Limpiar tabla
 
             productos.forEach(prod => {
-                let estado = '<span class="ok" style="color:green; font-weight:bold;">Stock OK</span>';
-                if (prod.stock_actual <= prod.punto_reorden) {
-                    estado = `<span class="alerta" style="color:red; font-weight:bold;">⚠️ BAJO (${prod.punto_reorden})</span>`;
+                // 1. DETECTAR ALERTA
+                const esBajoStock = prod.stock_actual <= prod.punto_reorden;
+
+                // 2. DEFINIR CLASE DE LA FILA (Para que se pinte roja)
+                // 'alerta-stock' debe estar en tu CSS
+                const claseFila = esBajoStock ? "alerta-stock" : "";
+
+                // 3. DEFINIR EL BADGE (Etiqueta bonita)
+                let estadoHTML = '';
+                if (esBajoStock) {
+                    estadoHTML = `<span class="badge-stock badge-danger">⚠️ BAJO (${prod.stock_actual})</span>`;
+                } else {
+                    estadoHTML = `<span class="badge-stock badge-success">OK</span>`;
                 }
 
+                // 4. CONSTRUIR HTML (Nota el class="${claseFila}" en el tr)
                 const fila = `
-                    <tr>
+                    <tr class="${claseFila}"> 
                         <td><strong>${prod.sku}</strong></td>
                         <td>${prod.nombre}</td>
                         <td>${prod.stock_actual}</td>
-                        <td>${estado}</td>
+                        <td>${estadoHTML}</td>
                         <td>$${prod.precio_venta.toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
                         <td>
                             <button class="btn-icon btn-vender" onclick="abrirModalMovimiento(${prod.id}, '${prod.sku}', 'salida')" title="Vender (-)">
@@ -254,7 +266,7 @@ async function cargarProductos() {
 
                             <span style="margin: 0 5px; border-left: 1px solid #ccc;"></span>
 
-                            <button class="btn-icon" style="background-color: #f6ad55; color: white;" onclick="abrirModalEditar(${prod.id})" title="Editar">
+                            <button class="btn-icon" style="background-color: #f6ad55; color: white;" onclick="abrirModalEditar(${JSON.stringify(prod).replace(/"/g, '&quot;')})" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <button class="btn-icon" style="background-color: #fc8181; color: white;" onclick="eliminarProducto(${prod.id})" title="Eliminar">

@@ -533,3 +533,28 @@ th {
         height: 230px;
     }
 }
+
+
+
+/* --- ALERTAS DE STOCK --- */
+.alerta-stock {
+    background-color: #ffe6e6 !important; /* Rojo muy suave */
+    border-left: 5px solid #e53e3e;       /* Borde rojo fuerte a la izquierda */
+}
+
+.badge-stock {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+
+.badge-danger {
+    background-color: #e53e3e;
+    color: white;
+}
+
+.badge-success {
+    background-color: #48bb78;
+    color: white;
+}
